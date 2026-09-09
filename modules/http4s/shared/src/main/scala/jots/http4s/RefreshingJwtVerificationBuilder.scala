@@ -85,11 +85,31 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
   def withRefreshIntervalOnError(refreshIntervalOnError: FiniteDuration): RefreshingJwtVerificationBuilder[F]
 
   /**
+    * Returns the minimum duration between the last refresh attempt
+    * and an extra refresh attempt, which is made when verification
+    * fails because no key matched the token key id (kid).
+    *
+    * The default minimum refresh interval on missing keys is 60 seconds.
+    */
+  def minRefreshIntervalOnMissingKey: FiniteDuration
+
+  /**
+    * Sets the minimum duration between the last refresh attempt and
+    * an extra refresh attempt, which is made when verification
+    * fails because no key matched the token key id (kid).
+    *
+    * The default minimum refresh interval on missing keys is 60 seconds.
+    */
+  def withMinRefreshIntervalOnMissingKey(
+    minRefreshIntervalOnMissingKey: FiniteDuration
+  ): RefreshingJwtVerificationBuilder[F]
+
+  /**
     * Returns the retry policy used when refreshing keys.
     *
     * The default retry policy is a jittered exponential
-    * backoff with up to 5 retries and a maximum wait of
-    * 1 minute between retries.
+    * backoff with up to 4 retries and a maximum wait of
+    * 5 seconds between retries.
     */
   def retryPolicy: RetryPolicy[F]
 
@@ -97,8 +117,8 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
     * Sets the retry policy used when refreshing keys.
     *
     * The default retry policy is a jittered exponential
-    * backoff with up to 5 retries and a maximum wait of
-    * 1 minute between retries.
+    * backoff with up to 4 retries and a maximum wait of
+    * 5 seconds between retries.
     */
   def withRetryPolicy(retryPolicy: RetryPolicy[F]): RefreshingJwtVerificationBuilder[F]
 
@@ -127,6 +147,7 @@ object RefreshingJwtVerificationBuilder {
     override val logger: Logger[F],
     override val refreshInterval: FiniteDuration,
     override val refreshIntervalOnError: FiniteDuration,
+    override val minRefreshIntervalOnMissingKey: FiniteDuration,
     override val retryPolicy: RetryPolicy[F],
     override val uri: Uri,
     override val verification: JwkSet => F[JwtVerification[F]]
@@ -152,6 +173,17 @@ object RefreshingJwtVerificationBuilder {
       )
 
       copy(refreshIntervalOnError = refreshIntervalOnError)
+    }
+
+    override def withMinRefreshIntervalOnMissingKey(
+      minRefreshIntervalOnMissingKey: FiniteDuration
+    ): RefreshingJwtVerificationBuilder[F] = {
+      require(
+        minRefreshIntervalOnMissingKey > Duration.Zero,
+        s"minimum refresh interval on missing key must be positive, was $minRefreshIntervalOnMissingKey"
+      )
+
+      copy(minRefreshIntervalOnMissingKey = minRefreshIntervalOnMissingKey)
     }
 
     override def withRetryPolicy(retryPolicy: RetryPolicy[F]): RefreshingJwtVerificationBuilder[F] =
@@ -209,7 +241,8 @@ object RefreshingJwtVerificationBuilder {
       logger = NoOpLogger[F],
       refreshInterval = 60.minutes,
       refreshIntervalOnError = 60.seconds,
-      retryPolicy = RetryPolicy(RetryPolicy.exponentialBackoff(maxWait = 1.minute, maxRetry = 5)),
+      minRefreshIntervalOnMissingKey = 60.seconds,
+      retryPolicy = RetryPolicy(RetryPolicy.exponentialBackoff(maxWait = 5.seconds, maxRetry = 4)),
       uri = uri,
       verification = verification
     )
