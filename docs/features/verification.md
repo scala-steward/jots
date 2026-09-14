@@ -37,7 +37,7 @@ final case class UserJwt(userId: String, expiresAt: Long, issuedAt: Long)
 
 object UserJwt {
   given Decoder[UserJwt] =
-    Decoder.forProduct3("userId", "exp", "iat")(UserJwt.apply)
+    Decoder.forProduct3("userId", "exp", "iat")(apply)
 
   given JwtDecoder[UserJwt] =
     JwtDecoder.decodeClaims

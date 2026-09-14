@@ -99,6 +99,11 @@ lazy val docs = project
     import laika.helium.config.IconLink
 
     Seq(
+      libraryDependencies ++= Seq(
+        "org.http4s" %% "http4s-dsl" % http4sVersion,
+        "org.http4s" %% "http4s-ember-client" % http4sVersion,
+        "org.slf4j" % "slf4j-nop" % slf4jVersion % Runtime
+      ),
       laikaConfig := laikaConfig.value
         .withConfigValue(LaikaKeys.titleDocuments.inputName, "index"),
       mdocVariables := mdocVariables.value
@@ -140,8 +145,9 @@ lazy val http4s = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       "org.http4s" %%% "http4s-server" % http4sVersion,
       "org.typelevel" %%% "case-insensitive" % caseInsensitiveVersion,
       "org.typelevel" %%% "cats-core" % catsVersion,
-      "org.typelevel" %%% "cats-effect-kernel" % catsEffectVersion,
       "org.typelevel" %%% "cats-effect" % catsEffectVersion,
+      "org.typelevel" %%% "cats-effect-kernel" % catsEffectVersion,
+      "org.typelevel" %%% "cats-kernel" % catsVersion,
       "org.typelevel" %%% "log4cats-core" % log4catsVersion,
       "org.typelevel" %%% "vault" % vaultVersion
     )
