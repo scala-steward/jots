@@ -43,13 +43,6 @@ import org.http4s.server.AuthMiddleware
 object JwtAuthMiddleware {
 
   /**
-    * Alias for [[JwtAuthMiddleware.verifyWith]] but where
-    * the `JwtVerification` instance is passed implicitly.
-    */
-  def apply[F[_]: JwtVerification: MonadThrow, A: JwtDecoder]: AuthMiddleware[F, A] =
-    verifyWith[F, A](JwtVerification[F])
-
-  /**
     * Returns an `AuthMiddleware` that reads tokens from the
     * `Authorization: Bearer <token>` header and proceeds to
     * verify them using the provided `JwtVerification`, then
@@ -59,7 +52,7 @@ object JwtAuthMiddleware {
     * a 401 Unauthorized response with a `WWW-Authenticate`
     * header set detailing the issue.
     */
-  def verifyWith[F[_]: MonadThrow, A: JwtDecoder](
+  def apply[F[_]: MonadThrow, A: JwtDecoder](
     verification: JwtVerification[F]
   ): AuthMiddleware[F, A] = {
     val onFailure: AuthedRoutes[JwtAuthFailure, F] =

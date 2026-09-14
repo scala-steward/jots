@@ -50,22 +50,6 @@ object JwtAuthMiddlewareSuite extends SimpleIOSuite {
       .map(_.combineAll)
   }
 
-  test("JwtAuthMiddleware.apply") {
-    val example = ExampleHmacJwt.HS256
-    for {
-      verification <- example.verification
-      response <- {
-        implicit val jwtVerification: JwtVerification[IO] = verification
-        implicit val jwtDecoder: JwtDecoder[String] = subjectDecoder
-        JwtAuthMiddleware[IO, String]
-          .apply(routes)
-          .run(requestWith(example.signedJwt))
-          .getOrElse(Response[IO](Status.NotFound))
-      }
-      subject <- response.as[String]
-    } yield expect.eql(Status.Ok, response.status) && expect.eql("1234567890", subject)
-  }
-
   test("JwtAuthMiddleware.rejectMissingToken") {
     for {
       verification <- ExampleHmacJwt.HS256.verification
@@ -165,8 +149,7 @@ object JwtAuthMiddlewareSuite extends SimpleIOSuite {
     decoder: JwtDecoder[String] = subjectDecoder
   ): IO[Response[IO]] = {
     implicit val jwtDecoder: JwtDecoder[String] = decoder
-    JwtAuthMiddleware
-      .verifyWith[IO, String](verification)
+    JwtAuthMiddleware[IO, String](verification)
       .apply(routes)
       .run(request)
       .getOrElse(Response[IO](Status.NotFound))
