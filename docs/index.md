@@ -9,6 +9,7 @@ Jots is a library for working with [JSON Web Tokens (JWTs)](https://en.wikipedia
 - Provides [testing](features/testing.md) support with [ScalaCheck](https://scalacheck.org) generators and String interpolators for secrets.
 - Separates [token parsing and verification](features/verification.md#separate-parsing-verification-and-decoding), so tokens can be inspected before verification.
 - Handles token signing with a [JSON Web Key (JWK)](features/signing.md#json-web-key) and verification with a [JWK Set](features/verification.md#json-web-key-set).
+- Integrates with [http4s](https://http4s.org) for [authentication](integrations/http4s.md#auth-middleware) and for JWK Set [refreshing verification](integrations/http4s.md#refreshing-verification).
 - Based on the [cats-effect](https://typelevel.org/cats-effect), [circe-jawn](https://circe.io/circe), [literally](https://github.com/typelevel/literally) and [scodec-bits](https://github.com/scodec/scodec-bits) libraries.
 
 Documentation is kept up-to-date, currently documenting v@VERSION@ on Scala @SCALA_DOCS_VERSION@.
@@ -66,6 +67,7 @@ Refer to the table below for dependencies and version support across modules.
 | -------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------ |
 | `jots`         | `jots-crypto` and circe-jawn @CIRCE_VERSION@                                                               | Scala @SCALA_PUBLISH_VERSIONS@ |
 | `jots-crypto`  | cats-effect-kernel @CATS_EFFECT_VERSION@, literally @LITERALLY_VERSION@, scodec-bits @SCODEC_BITS_VERSION@ | Scala @SCALA_PUBLISH_VERSIONS@ |
+| `jots-http4s`  | `jots` and http4s @HTTP4S_VERSION@                                                                         | Scala @SCALA_PUBLISH_VERSIONS@ |
 | `jots-testing` | `jots` and cats-effect @CATS_EFFECT_VERSION@, scalacheck @SCALACHECK_VERSION@                              | Scala @SCALA_PUBLISH_VERSIONS@ |
 
 For Scala.js and Scala Native version support, refer to the following table.
@@ -74,6 +76,7 @@ For Scala.js and Scala Native version support, refer to the following table.
 | -------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | `jots`         | Scala.js @SCALA_JS_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) | Scala Native @SCALA_NATIVE_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) |
 | `jots-crypto`  | Scala.js @SCALA_JS_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) | Scala Native @SCALA_NATIVE_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) |
+| `jots-http4s`  | Scala.js @SCALA_JS_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) | Scala Native @SCALA_NATIVE_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) |
 | `jots-testing` | Scala.js @SCALA_JS_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) | Scala Native @SCALA_NATIVE_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) |
 
 ## Compatibility

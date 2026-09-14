@@ -1,11 +1,17 @@
+val caseInsensitiveVersion = "1.5.0"
 val catsEffectVersion = "3.7.1"
 val catsVersion = "2.13.0"
 val circeVersion = "0.14.16"
+val fs2Version = "3.14.0"
+val http4sVersion = "0.23.37"
 val literallyVersion = "1.2.0"
+val log4catsVersion = "2.8.0"
 val scala213Version = "2.13.18"
 val scala3Version = "3.3.8"
 val scalaCheckVersion = "1.20.0"
 val scodecBitsVersion = "1.2.5"
+val slf4jVersion = "1.7.36"
+val vaultVersion = "3.7.0"
 val weaverVersion = "0.13.0"
 
 inThisBuild(
@@ -51,7 +57,7 @@ inThisBuild(
 )
 
 lazy val root = tlCrossRootProject
-  .aggregate(core, crypto, testing, tests, unidocs)
+  .aggregate(core, crypto, http4s, testing, tests, unidocs)
 
 lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("modules/core"))
@@ -64,7 +70,8 @@ lazy val core = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       "org.scodec" %%% "scodec-bits" % scodecBitsVersion,
       "org.typelevel" %%% "cats-core" % catsVersion,
       "org.typelevel" %%% "cats-effect-kernel" % catsEffectVersion,
-      "org.typelevel" %%% "cats-kernel" % catsVersion
+      "org.typelevel" %%% "cats-kernel" % catsVersion,
+      "org.typelevel" %%% "literally" % literallyVersion
     ) ++ scalaReflect(scalaVersion.value)
   )
 
@@ -84,7 +91,7 @@ lazy val crypto = crossProject(JVMPlatform, JSPlatform, NativePlatform)
 lazy val docs = project
   .in(file("site"))
   .enablePlugins(TypelevelSitePlugin)
-  .dependsOn(testing.jvm)
+  .dependsOn(http4s.jvm, testing.jvm)
   .settings {
     import laika.ast.Path.Root
     import laika.config.LaikaKeys
@@ -92,11 +99,17 @@ lazy val docs = project
     import laika.helium.config.IconLink
 
     Seq(
+      libraryDependencies ++= Seq(
+        "org.http4s" %% "http4s-dsl" % http4sVersion,
+        "org.http4s" %% "http4s-ember-client" % http4sVersion,
+        "org.slf4j" % "slf4j-nop" % slf4jVersion % Runtime
+      ),
       laikaConfig := laikaConfig.value
         .withConfigValue(LaikaKeys.titleDocuments.inputName, "index"),
       mdocVariables := mdocVariables.value
         .updated("CATS_EFFECT_VERSION", catsEffectVersion)
         .updated("CIRCE_VERSION", circeVersion)
+        .updated("HTTP4S_VERSION", http4sVersion)
         .updated("LITERALLY_VERSION", literallyVersion)
         .updated("MAJOR_VERSION", majorVersion(version.value))
         .updated("ORGANIZATION", (ThisBuild / organization).value)
@@ -118,6 +131,28 @@ lazy val docs = project
     )
   }
 
+lazy val http4s = crossProject(JVMPlatform, JSPlatform, NativePlatform)
+  .in(file("modules/http4s"))
+  .dependsOn(core)
+  .settings(
+    name := "jots-http4s",
+    libraryDependencies ++= Seq(
+      "co.fs2" %%% "fs2-core" % fs2Version,
+      "io.circe" %%% "circe-core" % circeVersion,
+      "org.http4s" %%% "http4s-circe" % http4sVersion,
+      "org.http4s" %%% "http4s-client" % http4sVersion,
+      "org.http4s" %%% "http4s-core" % http4sVersion,
+      "org.http4s" %%% "http4s-server" % http4sVersion,
+      "org.typelevel" %%% "case-insensitive" % caseInsensitiveVersion,
+      "org.typelevel" %%% "cats-core" % catsVersion,
+      "org.typelevel" %%% "cats-effect" % catsEffectVersion,
+      "org.typelevel" %%% "cats-effect-kernel" % catsEffectVersion,
+      "org.typelevel" %%% "cats-kernel" % catsVersion,
+      "org.typelevel" %%% "log4cats-core" % log4catsVersion,
+      "org.typelevel" %%% "vault" % vaultVersion
+    )
+  )
+
 lazy val testing = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("modules/testing"))
   .dependsOn(core)
@@ -137,7 +172,7 @@ lazy val testing = crossProject(JVMPlatform, JSPlatform, NativePlatform)
 
 lazy val tests = crossProject(JVMPlatform, JSPlatform, NativePlatform)
   .in(file("tests"))
-  .dependsOn(testing)
+  .dependsOn(http4s, testing)
   .settings(
     name := "jots-tests",
     publish / skip := true,
@@ -155,6 +190,11 @@ lazy val tests = crossProject(JVMPlatform, JSPlatform, NativePlatform)
     jsEnv := new org.scalajs.jsenv.nodejs.NodeJSEnv(),
     scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule))
   )
+  .jvmSettings(
+    libraryDependencies ++= Seq(
+      "org.slf4j" % "slf4j-nop" % slf4jVersion % Runtime
+    )
+  )
   .nativeEnablePlugins(ScalaNativeBrewedConfigPlugin)
   .nativeSettings(Test / nativeBrewFormulas += "openssl")
 
@@ -165,6 +205,7 @@ lazy val unidocs = project
     ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(
       core.jvm,
       crypto.jvm,
+      http4s.jvm,
       testing.jvm
     )
   )
