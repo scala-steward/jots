@@ -10,7 +10,7 @@ val scala213Version = "2.13.18"
 val scala3Version = "3.3.8"
 val scalaCheckVersion = "1.20.0"
 val scodecBitsVersion = "1.2.5"
-val slf4jVersion = "1.7.36"
+val slf4jVersion = "2.0.20"
 val vaultVersion = "3.7.0"
 val weaverVersion = "0.13.0"
 
