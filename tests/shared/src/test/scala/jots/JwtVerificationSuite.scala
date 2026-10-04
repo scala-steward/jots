@@ -704,9 +704,10 @@ object JwtVerificationSuite extends SimpleIOSuite {
       .jwkSet(NonEmptyList.of(JwtAlgorithm.HS256), keySet)
       .attempt
       .map {
-        case Left(e: JwtException.RejectedKeyAlgorithm) =>
+        case Left(e: JwtException.EmptyKeySet) =>
           expect.eql(
-            "the key with id [key-1] and algorithm (alg) [HS384] was rejected, expected [HS256]",
+            "the key set has no keys for signature verification: " +
+              "the key with id [key-1] and algorithm (alg) [HS384] was rejected, expected [HS256]",
             e.message
           )
         case _ => failure("unexpected case")
@@ -721,11 +722,46 @@ object JwtVerificationSuite extends SimpleIOSuite {
       .jwkSet(NonEmptyList.of(JwtAlgorithm.HS256), keySet)
       .attempt
       .map {
-        case Left(e: JwtException.InvalidKeyAlgorithm) =>
-          expect.eql("the key with id [key-1] has invalid algorithm (alg) [256]", e.message)
+        case Left(e: JwtException.EmptyKeySet) =>
+          expect.eql(
+            "the key set has no keys for signature verification: " +
+              "the key with id [key-1] has invalid algorithm (alg) [256]",
+            e.message
+          )
         case _ => failure("unexpected case")
       }
   }
+
+  test("JwtVerification.jwkSet.skipsUnusableKeys") {
+    for {
+      signed <- sign(JwtClaims("sub" -> "alice".asJson), JwtHeader.default.withKeyId(JwkKeyId("key-1")))
+      verification <- JwtVerification.default[IO].jwkSet(NonEmptyList.of(JwtAlgorithm.HS256), mixedKeySet)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.jwkSet.rejectSkippedKey") {
+    for {
+      signed <- sign(JwtClaims("sub" -> "alice".asJson), JwtHeader.default.withKeyId(JwkKeyId("key-2")))
+      verification <- JwtVerification.default[IO].jwkSet(NonEmptyList.of(JwtAlgorithm.HS256), mixedKeySet)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.MissingKey) => () }
+    } yield success
+  }
+
+  /**
+    * A key set with a usable key (key-1), and keys which cannot be used
+    * because the algorithm is not accepted (key-2), or because the key
+    * type is not supported (key-3 and key-4).
+    */
+  private val mixedKeySet: JwkSet =
+    JwkSet(
+      octJwk("key-1"),
+      octJwkWithAlgorithm("key-2", "HS384".asJson),
+      Jwk("kty" -> "AKP".asJson, "kid" -> "key-3".asJson).fold(throw _, identity),
+      Jwk("kty" -> "AKP".asJson, "kid" -> "key-4".asJson, "alg" -> "ML-DSA-44".asJson).fold(throw _, identity)
+    )
 
   private def octJwkWithAlgorithm(keyId: String, algorithm: io.circe.Json): Jwk =
     Jwk(
