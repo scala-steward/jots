@@ -260,6 +260,28 @@ object JwtVerificationSuite extends SimpleIOSuite {
     } yield success
   }
 
+  test("JwtVerification.rejectUnexpectedAudience") {
+    for {
+      signed <- sign(JwtClaims("aud" -> "some-audience".asJson))
+      verification <- JwtVerification.default[IO].hmac(algorithm, secretKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException) => () }
+    } yield success
+  }
+
+  test("JwtVerification.jwkSet.rejectUnexpectedAudience") {
+    val keySet = JwkSet(octJwk("key-1"))
+    for {
+      signed <- sign(
+        JwtClaims("aud" -> "some-audience".asJson),
+        JwtHeader.default.withKeyId(JwkKeyId("key-1"))
+      )
+      verification <- JwtVerification.default[IO].jwkSetAll(keySet)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException) => () }
+    } yield success
+  }
+
   test("JwtVerification.rejectUnacceptedSubject") {
     for {
       signed <- sign(JwtClaims("sub" -> "other-subject".asJson))
