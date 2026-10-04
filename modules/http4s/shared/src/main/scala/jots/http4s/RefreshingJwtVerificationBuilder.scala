@@ -21,6 +21,7 @@ import cats.effect.Resource
 import cats.effect.Temporal
 import jots.JwkSet
 import jots.JwtAlgorithm
+import jots.JwtAsymmetricAlgorithm
 import jots.JwtVerification
 import jots.JwtVerificationBuilder
 import jots.crypto.Crypto
@@ -234,7 +235,7 @@ object RefreshingJwtVerificationBuilder {
 
   /**
     * Returns a new [[RefreshingJwtVerificationBuilder]] instance
-    * which verifies tokens using all recognized algorithms.
+    * which verifies tokens using all recognized asymmetric algorithms.
     *
     * The keys will be fetched by issuing a request to the `Uri`
     * with the specified `Client`. Note there is a default retry
@@ -251,8 +252,8 @@ object RefreshingJwtVerificationBuilder {
 
   /**
     * Returns a new [[RefreshingJwtVerificationBuilder]] instance
-    * which verifies tokens using all recognized algorithms, and
-    * where the verification is customized using the function.
+    * which verifies tokens using all recognized asymmetric algorithms,
+    * and where the verification is customized using the function.
     *
     * The function can be used to, for example, set the accepted
     * audiences and issuers using the [[jots.JwtVerificationBuilder]].
@@ -270,7 +271,7 @@ object RefreshingJwtVerificationBuilder {
     F: Temporal[F],
     crypto: Crypto[F]
   ): RefreshingJwtVerificationBuilder[F] =
-    jwkSetWith(JwtAlgorithm.All, client, uri)(configure)
+    jwkSetWith(JwtAsymmetricAlgorithm.All, client, uri)(configure)
 
   /**
     * Returns a new [[RefreshingJwtVerificationBuilder]] instance
