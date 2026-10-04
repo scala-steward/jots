@@ -17,10 +17,13 @@
 package jots
 
 import cats.Show
+import cats.data.NonEmptyList
 import cats.kernel.laws.discipline.HashTests
 import cats.syntax.all.*
 import io.circe.JsonObject
+import io.circe.syntax.*
 import jots.testing.*
+import scala.concurrent.duration.*
 import weaver.SimpleIOSuite
 import weaver.discipline.Discipline
 import weaver.scalacheck.Checkers
@@ -46,5 +49,42 @@ object JwtClaimsSuite extends SimpleIOSuite with Checkers with Discipline {
         expect(claims.toString.contains(value.show))
       }.combineAll
     }
+  }
+
+  pureTest("JwtClaims.registeredClaims") {
+    val claims =
+      JwtClaims.empty
+        .withIssuer("https://example.auth0.com/")
+        .withSubject("8d3bbd14-dfd9-47fa-aab4-d76daf00b4f1")
+        .withAudience("https://api.example.com")
+        .withExpiration(3345062400L.seconds)
+        .withNotBefore(1767225600L.seconds)
+        .withIssuedAt(1767225600L.seconds)
+        .withJwtId("a4d8e2f1-6c3b-4f5a-9e7d-1b2c3d4e5f60")
+
+    expect.eql(
+      JsonObject(
+        "iss" -> "https://example.auth0.com/".asJson,
+        "sub" -> "8d3bbd14-dfd9-47fa-aab4-d76daf00b4f1".asJson,
+        "aud" -> "https://api.example.com".asJson,
+        "exp" -> 3345062400L.asJson,
+        "nbf" -> 1767225600L.asJson,
+        "iat" -> 1767225600L.asJson,
+        "jti" -> "a4d8e2f1-6c3b-4f5a-9e7d-1b2c3d4e5f60".asJson
+      ),
+      claims.toJsonObject
+    )
+  }
+
+  pureTest("JwtClaims.withAudience") {
+    val audiences = List("https://api.example.com", "https://admin.example.com")
+    expect.eql(
+      Some(audiences.asJson),
+      JwtClaims.empty.withAudience(audiences.head, audiences.tail: _*).toJsonObject("aud")
+    ) &&
+    expect.eql(
+      Some(audiences.asJson),
+      JwtClaims.empty.withAudienceList(NonEmptyList.fromListUnsafe(audiences)).toJsonObject("aud")
+    )
   }
 }

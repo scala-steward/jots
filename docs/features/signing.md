@@ -58,17 +58,17 @@ JwtEncoder
 
 Note signing-related header keys (e.g. `alg`) are set by `JwtSigning` during signing, and not manually.
 
-If we don't want to define an `Encoder.AsObject`, we can use `JwtEncoder.encodeClaimsWith` instead.
+If we don't want to define an `Encoder.AsObject`, we can use `JwtEncoder.encodeClaimsWith` instead. Note there are several functions on `JwtClaims` for including registered claims, like e.g. `withAudience`, `withExpiration` and `withIssuedAt` to mention a few of them.
 
 ```scala mdoc:silent
 import jots.JwtClaims
+import scala.concurrent.duration.*
 
 JwtEncoder.encodeClaimsWith { (userJwt: UserJwt) =>
-  JwtClaims.empty.addAll(
-    "userId" -> userJwt.userId.asJson,
-    "exp" -> userJwt.expiresAt.asJson,
-    "iat" -> userJwt.issuedAt.asJson
-  )
+  JwtClaims.empty
+    .add("userId", userJwt.userId.asJson)
+    .withExpiration(userJwt.expiresAt.seconds)
+    .withIssuedAt(userJwt.issuedAt.seconds)
 }
 ```
 

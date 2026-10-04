@@ -18,16 +18,73 @@ package jots
 
 import cats.Hash
 import cats.Show
+import cats.data.NonEmptyList
 import cats.syntax.all.*
 import io.circe.Json
 import io.circe.JsonObject
+import io.circe.syntax.*
 import java.nio.charset.StandardCharsets.UTF_8
+import scala.concurrent.duration.FiniteDuration
 import scodec.bits.ByteVector
 
 /**
   * The claims of a JWT being constructed, prior to signing.
   */
 sealed abstract class JwtClaims {
+
+  /**
+    * Returns a new [[JwtClaims]] with the specified audiences
+    * set for the `aud` key.
+    *
+    * Note a single audience is set as a `String`, while multiple
+    * audiences are set as an array of `String`s.
+    */
+  def withAudience(audience: String, audiences: String*): JwtClaims
+
+  /**
+    * Returns a new [[JwtClaims]] with the specified audiences
+    * set for the `aud` key.
+    *
+    * Note a single audience is set as a `String`, while multiple
+    * audiences are set as an array of `String`s.
+    */
+  def withAudienceList(audiences: NonEmptyList[String]): JwtClaims
+
+  /**
+    * Returns a new [[JwtClaims]] with the specified expiration
+    * set for the `exp` key, in seconds since the epoch.
+    */
+  def withExpiration(expiresAt: FiniteDuration): JwtClaims
+
+  /**
+    * Returns a new [[JwtClaims]] with the specified issued at
+    * set for the `iat` key, in seconds since the epoch.
+    */
+  def withIssuedAt(issuedAt: FiniteDuration): JwtClaims
+
+  /**
+    * Returns a new [[JwtClaims]] with the specified issuer
+    * set for the `iss` key.
+    */
+  def withIssuer(issuer: String): JwtClaims
+
+  /**
+    * Returns a new [[JwtClaims]] with the specified token
+    * id set for the `jti` key.
+    */
+  def withJwtId(jwtId: String): JwtClaims
+
+  /**
+    * Returns a new [[JwtClaims]] with the specified not-before
+    * set for the `nbf` key, in seconds since the epoch.
+    */
+  def withNotBefore(notBefore: FiniteDuration): JwtClaims
+
+  /**
+    * Returns a new [[JwtClaims]] with the specified subject
+    * set for the `sub` key.
+    */
+  def withSubject(subject: String): JwtClaims
 
   /**
     * Returns a new [[JwtClaims]] with the specified value
@@ -92,6 +149,33 @@ object JwtClaims {
   private final case class JwtClaimsImpl(
     override val toJsonObject: JsonObject
   ) extends JwtClaims {
+    override def withAudience(audience: String, audiences: String*): JwtClaims =
+      withAudienceList(NonEmptyList.of(audience, audiences: _*))
+
+    override def withAudienceList(audiences: NonEmptyList[String]): JwtClaims =
+      audiences match {
+        case NonEmptyList(audience, Nil) => add("aud", audience.asJson)
+        case audiences => add("aud", audiences.asJson)
+      }
+
+    override def withExpiration(expiresAt: FiniteDuration): JwtClaims =
+      add("exp", expiresAt.toSeconds.asJson)
+
+    override def withIssuedAt(issuedAt: FiniteDuration): JwtClaims =
+      add("iat", issuedAt.toSeconds.asJson)
+
+    override def withIssuer(issuer: String): JwtClaims =
+      add("iss", issuer.asJson)
+
+    override def withJwtId(jwtId: String): JwtClaims =
+      add("jti", jwtId.asJson)
+
+    override def withNotBefore(notBefore: FiniteDuration): JwtClaims =
+      add("nbf", notBefore.toSeconds.asJson)
+
+    override def withSubject(subject: String): JwtClaims =
+      add("sub", subject.asJson)
+
     override def add(name: String, value: Json): JwtClaims =
       mapJsonObject(_.add(name, value))
 
