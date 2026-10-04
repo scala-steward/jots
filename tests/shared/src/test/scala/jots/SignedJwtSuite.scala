@@ -54,6 +54,13 @@ object SignedJwtSuite extends SimpleIOSuite with Checkers with Discipline {
     expect(SignedJwt.fromString(s"$header.$claims.c2lnbmF0dXJl").isLeft)
   }
 
+  pureTest("SignedJwt.fromString.maxNesting") {
+    val header = base64UrlNoPad("""{"alg":"HS256"}""")
+    def claims(depth: Int) = base64UrlNoPad(s"""{"nested":${"[" * (depth - 1)}${"]" * (depth - 1)}}""")
+    expect(SignedJwt.fromString(s"$header.${claims(32)}.c2lnbmF0dXJl").isRight) &&
+    expect(SignedJwt.fromString(s"$header.${claims(33)}.c2lnbmF0dXJl").isLeft)
+  }
+
   private def base64UrlNoPad(json: String): String =
     ByteVector.view(json.getBytes(UTF_8)).toBase64UrlNoPad
 }

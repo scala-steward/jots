@@ -27,6 +27,7 @@ import io.circe.JsonObject
 import io.circe.jawn.JawnParser
 import io.circe.syntax.*
 import jots.JwtException.InvalidJwkSet
+import jots.internal.JsonDepth
 
 /**
   * Represents a set of keys known as a JSON Web Key Set (JWK Set).
@@ -114,7 +115,7 @@ object JwkSet {
     decode(jwkSet).leftMap(e => new InvalidJwkSet("failed to decode", Some(e)))
 
   implicit val jwkSetDecoder: Decoder[JwkSet] =
-    Decoder[List[Jwk]].at("keys").map(fromList)
+    JsonDepth.decoder(Decoder[List[Jwk]].at("keys")).map(fromList)
 
   implicit val jwkSetEncoder: Encoder[JwkSet] =
     Encoder.instance(_.toJson)

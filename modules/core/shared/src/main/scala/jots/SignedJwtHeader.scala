@@ -24,6 +24,7 @@ import io.circe.Json
 import io.circe.JsonObject
 import io.circe.jawn.JawnParser
 import jots.JwtException.InvalidSignedJwtHeader
+import jots.internal.JsonDepth
 import scodec.bits.Bases.Alphabets.Base64UrlNoPad
 import scodec.bits.ByteVector
 
@@ -131,5 +132,5 @@ object SignedJwtHeader {
     JawnParser(allowDuplicateKeys = false)
 
   private def decode(s: String): Either[Error, JsonObject] =
-    parser.decodeCharSequence[JsonObject](s)
+    JsonDepth.decode[JsonObject](parser, s)
 }
