@@ -151,7 +151,7 @@ object ExampleHmacJwt {
   lazy val All: List[ExampleHmacJwt] =
     List(HS256, HS256Jwk, HS384, HS384Jwk, HS512, HS512Jwk)
 
-  val exampleHmacJwtGen: Gen[ExampleHmacJwt] =
+  lazy val exampleHmacJwtGen: Gen[ExampleHmacJwt] =
     Gen.oneOf(All)
 
   implicit val exampleHmacJwtArbitrary: Arbitrary[ExampleHmacJwt] =

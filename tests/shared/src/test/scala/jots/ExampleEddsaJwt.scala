@@ -157,7 +157,7 @@ object ExampleEddsaJwt {
   lazy val All: List[ExampleEddsaJwt] =
     List(Ed25519Pkcs8, EdDSAJwk, EdDSAPkcs8, EdDSAPkcs8AndX509Certificate)
 
-  val exampleEddsaJwtGen: Gen[ExampleEddsaJwt] =
+  lazy val exampleEddsaJwtGen: Gen[ExampleEddsaJwt] =
     Gen.oneOf(All)
 
   implicit val exampleEddsaJwtArbitrary: Arbitrary[ExampleEddsaJwt] =

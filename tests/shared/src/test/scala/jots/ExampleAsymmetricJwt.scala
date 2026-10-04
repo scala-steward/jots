@@ -41,7 +41,7 @@ object ExampleAsymmetricJwt {
   lazy val All: List[ExampleAsymmetricJwt] =
     ExampleEcdsaJwt.All ::: ExampleEddsaJwt.All ::: ExampleRsaJwt.All
 
-  val exampleAsymmetricJwtGen: Gen[ExampleAsymmetricJwt] =
+  lazy val exampleAsymmetricJwtGen: Gen[ExampleAsymmetricJwt] =
     Gen.oneOf(All)
 
   implicit val exampleAsymmetricJwtArbitrary: Arbitrary[ExampleAsymmetricJwt] =

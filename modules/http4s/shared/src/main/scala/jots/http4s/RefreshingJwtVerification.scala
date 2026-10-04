@@ -139,7 +139,7 @@ object RefreshingJwtVerification {
 
   /**
     * Returns a new [[RefreshingJwtVerification]] instance which
-    * verifies tokens using all recognized algorithms.
+    * verifies tokens using all recognized asymmetric algorithms.
     *
     * The keys will be fetched by issuing a request to the `Uri`
     * with the specified `Client`. Note there is a default retry
@@ -159,8 +159,8 @@ object RefreshingJwtVerification {
 
   /**
     * Returns a new [[RefreshingJwtVerification]] instance which
-    * verifies tokens using all recognized algorithms, and where
-    * the verification is customized using the specified function.
+    * verifies tokens using all recognized asymmetric algorithms,
+    * and where the verification is customized using a function.
     *
     * The function can be used to, for example, set the accepted
     * audiences and issuers using the [[jots.JwtVerificationBuilder]].

@@ -75,7 +75,7 @@ We should take care to _not_ put secrets, like `SecretKey`, in source code.
 
 ## Refreshing Verification
 
-There is `RefreshingJwtVerification` with support for periodically fetching a `JwkSet` from an HTTP endpoint and refreshing verification. The following example shows how to create a `RefreshingJwtVerification` instance, which accepts tokens issued by `https://example.auth0.com/` for the `https://api.example.com` audience. Note the example allows all supported algorithms and uses the [default refresh settings](#default-refresh-settings).
+There is `RefreshingJwtVerification` with support for periodically fetching a `JwkSet` from an HTTP endpoint and refreshing verification. The following example shows how to create a `RefreshingJwtVerification` instance, which accepts tokens issued by `https://example.auth0.com/` for the `https://api.example.com` audience. Note the example allows all supported asymmetric algorithms and uses the [default refresh settings](#default-refresh-settings).
 
 ```scala mdoc:silent
 import cats.effect.Resource
