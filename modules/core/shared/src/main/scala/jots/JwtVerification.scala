@@ -26,7 +26,9 @@ import java.util.concurrent.TimeUnit
 import jots.JwtException.*
 import jots.crypto.Crypto
 import jots.crypto.PublicKey
+import jots.crypto.RsaAlgorithm
 import jots.crypto.SecretKey
+import jots.crypto.internal.KeyAlgorithm
 import jots.internal.KeyLength
 import jots.internal.KeyRequirement
 import scala.concurrent.duration.Duration
@@ -117,6 +119,7 @@ object JwtVerification {
     /**
       * Returns a new [[JwtVerification]] instance which verifies
       * tokens using all recognized ECDSA algorithms and a public key.
+      * Only the algorithm for the curve of the public key is accepted.
       */
     def ecdsaAll(
       publicKey: PublicKey
@@ -161,6 +164,7 @@ object JwtVerification {
     /**
       * Returns a new [[JwtVerification]] instance which verifies
       * tokens using all recognized EdDSA algorithms and a public key.
+      * Only the algorithm for the curve of the public key is accepted.
       */
     def eddsaAll(
       publicKey: PublicKey
@@ -290,6 +294,7 @@ object JwtVerification {
     /**
       * Returns a new [[JwtVerification]] instance which verifies
       * tokens using all recognized RSA algorithms and a public key.
+      * Only RSA-PSS algorithms are accepted for RSA-PSS public keys.
       */
     def rsaAll(
       publicKey: PublicKey
@@ -390,15 +395,24 @@ object JwtVerification {
   ): F[JwtVerification[G]] = {
     import builder.*
 
+    val keyLength: KeyLength =
+      KeyLength.fromPublicKey(publicKey)
+
     val ensureKeyRequirements: F[Unit] =
       F.whenA(checkKeyRequirements) {
-        KeyLength.fromPublicKey(publicKey) match {
+        keyLength match {
           case KeyLength.Unknown =>
             F.raiseError[Unit](new InvalidPublicKey("unable to determine public key type and length"))
           case keyLength =>
             KeyRequirement.check[F](algorithms.map(_.keyRequirement), keyLength)
         }
       }
+
+    val algorithmByName: Map[String, JwtAsymmetricAlgorithm] =
+      keyAlgorithms(algorithms, keyLength, KeyAlgorithm.isRsaPss(publicKey))
+        .distinctBy(_.name)
+        .map(algorithm => algorithm.name -> algorithm)
+        .toMap
 
     ensureKeyRequirements.as {
       new JwtVerification[G] {
@@ -414,7 +428,7 @@ object JwtVerification {
             case Some(algorithm) =>
               algorithm.as[String] match {
                 case Right(algorithm) =>
-                  algorithmWithName(algorithm) match {
+                  algorithmByName.get(algorithm) match {
                     case Some(algorithm) => verifyAsymmetric(jwt, algorithm, publicKey)
                     case None => G.raiseError(new RejectedAlgorithm())
                   }
@@ -432,10 +446,31 @@ object JwtVerification {
         ): G[Unit] =
           Crypto[G]
             .verify(algorithm.asymmetricAlgorithm, publicKey)(jwt.signedBytes, jwt.signature.toSignature)
+            .adaptError { case cause => new SignatureVerificationFailed(cause) }
             .flatMap(verified => G.raiseUnless(verified.isValid)(new InvalidSignature()))
       }
     }
   }
+
+  /*
+   * Returns the algorithms which can be used with the public key.
+   */
+  private def keyAlgorithms(
+    algorithms: NonEmptyList[JwtAsymmetricAlgorithm],
+    keyLength: KeyLength,
+    rsaPss: Boolean
+  ): List[JwtAsymmetricAlgorithm] =
+    keyLength match {
+      case KeyLength.Unknown =>
+        algorithms.toList
+      case keyLength =>
+        algorithms.filter { algorithm =>
+          algorithm.asymmetricAlgorithm match {
+            case _: RsaAlgorithm if rsaPss => false
+            case _ => KeyRequirement.matches(algorithm.keyRequirement, keyLength)
+          }
+        }
+    }
 
   private[jots] def fromJwkSetBuilder[F[_], G[_]](
     builder: JwtJwkSetVerificationBuilder[F, G]

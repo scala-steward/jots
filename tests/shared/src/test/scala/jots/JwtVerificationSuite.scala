@@ -692,7 +692,7 @@ object JwtVerificationSuite extends SimpleIOSuite {
         .withCheckKeyRequirements(false)
         .build
       result <- signed.verifyWith(verification).attempt
-      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException) => () }
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.SignatureVerificationFailed) => () }
     } yield success
   }
 
