@@ -24,6 +24,9 @@ import cats.effect.Resource
 import cats.effect.Temporal
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
+import io.circe.Decoder
+import io.circe.DecodingFailure
+import io.circe.Json
 import java.util.concurrent.CancellationException
 import jots.JwkSet
 import jots.JwtAlgorithm
@@ -34,7 +37,10 @@ import jots.SignedJwt
 import jots.VerifiedJwt
 import jots.crypto.Crypto
 import jots.internal.SkippedKeys
+import org.http4s.EntityDecoder
+import org.http4s.MediaType
 import org.http4s.Uri
+import org.http4s.circe.jsonOfWithMedia
 import org.http4s.client.Client
 import org.http4s.client.middleware.Retry
 import org.typelevel.ci.CIString
@@ -209,13 +215,28 @@ object RefreshingJwtVerification {
     val retryClient: Client[F] =
       Retry(retryPolicy)(client)
 
+    implicit val keysDecoder: EntityDecoder[F, (JwkSet, List[(Json, DecodingFailure)])] = {
+      implicit val decoder: Decoder[(JwkSet, List[(Json, DecodingFailure)])] =
+        JwkSet.decoderSkipInvalidKeys
+
+      jsonOfWithMedia(MediaType.application.json, MediaType.application.`jwk-set+json`)
+    }
+
     def fetchState: F[State[F]] =
       for {
-        keys <- retryClient.expect[JwkSet](uri)
+        fetched <- retryClient.expect[(JwkSet, List[(Json, DecodingFailure)])](uri)
+        (keys, decodeFailures) = fetched
+        _ <- logDecodeFailures(decodeFailures)
         verification <- builder.verification(keys)
         _ <- logSkippedKeys(verification)
         state <- State.next(keys, verification)
       } yield state
+
+    def logDecodeFailures(decodeFailures: List[(Json, DecodingFailure)]): F[Unit] =
+      decodeFailures.traverseVoid { case (key, failure) =>
+        val keyId = key.hcursor.get[String]("kid").toOption.foldMap(keyId => s" with id [$keyId]")
+        logger.warn(failure)(s"Skipped key$keyId which cannot be decoded")
+      }
 
     def logSkippedKeys(verification: JwtVerification[F]): F[Unit] =
       verification match {

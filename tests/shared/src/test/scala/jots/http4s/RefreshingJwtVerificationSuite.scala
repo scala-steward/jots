@@ -356,6 +356,18 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield success
   }
 
+  test("RefreshingJwtVerification.skipsUndecodableKeys") {
+    val keySetJson = s"""{"keys":[${octJwk("key-1").toJson.noSpaces},{"kid":"key-2"}]}"""
+    for {
+      signed <- sign("key-1")
+      testClient <- TestClient(jsonResponse(keySetJson))
+      result <- builder(testClient.client).build.use { verification =>
+        (verification.keys, verification.verify(signed)).tupled.attempt
+      }
+      _ <- matchOrFailFast[IO](result) { case Right((keys, _)) if keys === keySet => () }
+    } yield success
+  }
+
   test("RefreshingJwtVerification.retainKeysOnError") {
     for {
       signed <- sign("key-1")
@@ -665,9 +677,12 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     IO.pure(Response[IO](Status.Ok).withEntity(keySet))
 
   private val invalidKeysResponse: IO[Response[IO]] =
+    jsonResponse("{}")
+
+  private def jsonResponse(json: String): IO[Response[IO]] =
     IO.pure(
       Response[IO](Status.Ok)
-        .withEntity("{}")
+        .withEntity(json)
         .withContentType(`Content-Type`(MediaType.application.json))
     )
 

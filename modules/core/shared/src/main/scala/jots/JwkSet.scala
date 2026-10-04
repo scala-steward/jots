@@ -20,6 +20,7 @@ import cats.Hash
 import cats.Show
 import cats.syntax.all.*
 import io.circe.Decoder
+import io.circe.DecodingFailure
 import io.circe.Encoder
 import io.circe.Error
 import io.circe.Json
@@ -116,6 +117,12 @@ object JwkSet {
 
   implicit val jwkSetDecoder: Decoder[JwkSet] =
     JsonDepth.decoder(Decoder[List[Jwk]].at("keys")).map(fromList)
+
+  private[jots] val decoderSkipInvalidKeys: Decoder[(JwkSet, List[(Json, DecodingFailure)])] =
+    JsonDepth.decoder(Decoder[List[Json]].at("keys")).map { keys =>
+      val (skipped, decoded) = keys.partitionMap(key => key.as[Jwk].leftMap((key, _)))
+      (fromList(decoded), skipped)
+    }
 
   implicit val jwkSetEncoder: Encoder[JwkSet] =
     Encoder.instance(_.toJson)
