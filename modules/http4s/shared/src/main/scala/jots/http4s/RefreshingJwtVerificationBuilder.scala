@@ -22,6 +22,7 @@ import cats.effect.Temporal
 import jots.JwkSet
 import jots.JwtAlgorithm
 import jots.JwtVerification
+import jots.JwtVerificationBuilder
 import jots.crypto.Crypto
 import org.http4s.Uri
 import org.http4s.client.Client
@@ -206,7 +207,30 @@ object RefreshingJwtVerificationBuilder {
     client: Client[F],
     uri: Uri
   )(implicit F: Temporal[F], crypto: Crypto[F]): RefreshingJwtVerificationBuilder[F] =
-    refreshWith(client, uri)(JwtVerification.default[F].jwkSet(algorithms, _))
+    jwkSetWith(algorithms, client, uri)(identity)
+
+  /**
+    * Returns a new [[RefreshingJwtVerificationBuilder]] instance
+    * which verifies tokens using a list of algorithms, and where
+    * the verification is customized using the specified function.
+    *
+    * The function can be used to, for example, set the accepted
+    * audiences and issuers using the [[jots.JwtVerificationBuilder]].
+    *
+    * The keys will be fetched by issuing a request to the `Uri`
+    * with the specified `Client`. Note there is a default retry
+    * policy in place and keys are refreshed every 60 minutes.
+    */
+  def jwkSetWith[F[_]](
+    algorithms: NonEmptyList[JwtAlgorithm],
+    client: Client[F],
+    uri: Uri
+  )(
+    configure: JwtVerificationBuilder[F, F] => JwtVerificationBuilder[F, F]
+  )(implicit F: Temporal[F], crypto: Crypto[F]): RefreshingJwtVerificationBuilder[F] =
+    refreshWith(client, uri)(keys =>
+      configure(JwtVerificationBuilder.default[F].jwkSet(algorithms, keys)).build
+    )
 
   /**
     * Returns a new [[RefreshingJwtVerificationBuilder]] instance
@@ -223,7 +247,30 @@ object RefreshingJwtVerificationBuilder {
     F: Temporal[F],
     crypto: Crypto[F]
   ): RefreshingJwtVerificationBuilder[F] =
-    refreshWith(client, uri)(JwtVerification.default[F].jwkSetAll)
+    jwkSetAllWith(client, uri)(identity)
+
+  /**
+    * Returns a new [[RefreshingJwtVerificationBuilder]] instance
+    * which verifies tokens using all recognized algorithms, and
+    * where the verification is customized using the function.
+    *
+    * The function can be used to, for example, set the accepted
+    * audiences and issuers using the [[jots.JwtVerificationBuilder]].
+    *
+    * The keys will be fetched by issuing a request to the `Uri`
+    * with the specified `Client`. Note there is a default retry
+    * policy in place and keys are refreshed every 60 minutes.
+    */
+  def jwkSetAllWith[F[_]](
+    client: Client[F],
+    uri: Uri
+  )(
+    configure: JwtVerificationBuilder[F, F] => JwtVerificationBuilder[F, F]
+  )(implicit
+    F: Temporal[F],
+    crypto: Crypto[F]
+  ): RefreshingJwtVerificationBuilder[F] =
+    jwkSetWith(JwtAlgorithm.All, client, uri)(configure)
 
   /**
     * Returns a new [[RefreshingJwtVerificationBuilder]] instance

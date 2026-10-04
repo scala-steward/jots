@@ -613,9 +613,9 @@ object JwtVerification {
     import builder.*
 
     for {
-      _ <- acceptedAudiences.traverseVoid(verifyAudience(claims, _))
-      _ <- acceptedIssuers.traverseVoid(verifyIssuer(claims, _))
-      _ <- acceptedSubjects.traverseVoid(verifySubject(claims, _))
+      _ <- verifyAudience(claims, acceptedAudiences)
+      _ <- verifyIssuer(claims, acceptedIssuers)
+      _ <- verifySubject(claims, acceptedSubjects)
       currentTime <- Clock[G].realTime
       _ <- verifyExpiration(claims, currentTime, clockSkew, checkExpiration, requireExpiration)
       _ <- verifyIssuedAt(claims, currentTime, clockSkew, checkIssuedAt, requireIssuedAt)
@@ -624,6 +624,16 @@ object JwtVerification {
   }
 
   private def verifyAudience[F[_]](
+    claims: SignedJwtClaims,
+    accepted: AcceptedAudiences
+  )(implicit F: ApplicativeThrow[F]): F[Unit] =
+    accepted match {
+      case AcceptedAudiences.OneOf(accepted) => verifyAudienceOneOf(claims, accepted)
+      case AcceptedAudiences.AnyAudience => F.unit
+      case AcceptedAudiences.NoAudience => verifyNoAudience(claims)
+    }
+
+  private def verifyAudienceOneOf[F[_]](
     claims: SignedJwtClaims,
     accepted: NonEmptyList[String]
   )(implicit F: ApplicativeThrow[F]): F[Unit] =
@@ -638,7 +648,24 @@ object JwtVerification {
         F.raiseError(new MissingAudience())
     }
 
+  private def verifyNoAudience[F[_]](
+    claims: SignedJwtClaims
+  )(implicit F: ApplicativeThrow[F]): F[Unit] =
+    claims.toJsonObject("aud") match {
+      case Some(audience) => F.raiseError(new UnexpectedAudience(audience))
+      case None => F.unit
+    }
+
   private def verifyIssuer[F[_]](
+    claims: SignedJwtClaims,
+    accepted: AcceptedIssuers
+  )(implicit F: ApplicativeThrow[F]): F[Unit] =
+    accepted match {
+      case AcceptedIssuers.OneOf(accepted) => verifyIssuerOneOf(claims, accepted)
+      case AcceptedIssuers.AnyIssuer => F.unit
+    }
+
+  private def verifyIssuerOneOf[F[_]](
     claims: SignedJwtClaims,
     accepted: NonEmptyList[String]
   )(implicit F: ApplicativeThrow[F]): F[Unit] =
@@ -654,6 +681,15 @@ object JwtVerification {
     }
 
   private def verifySubject[F[_]](
+    claims: SignedJwtClaims,
+    accepted: AcceptedSubjects
+  )(implicit F: ApplicativeThrow[F]): F[Unit] =
+    accepted match {
+      case AcceptedSubjects.OneOf(accepted) => verifySubjectOneOf(claims, accepted)
+      case AcceptedSubjects.AnySubject => F.unit
+    }
+
+  private def verifySubjectOneOf[F[_]](
     claims: SignedJwtClaims,
     accepted: NonEmptyList[String]
   )(implicit F: ApplicativeThrow[F]): F[Unit] =

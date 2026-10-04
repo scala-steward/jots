@@ -260,6 +260,108 @@ object JwtVerificationSuite extends SimpleIOSuite {
     } yield success
   }
 
+  test("JwtVerification.acceptsAcceptedAudience") {
+    for {
+      signed <- sign(JwtClaims("aud" -> List("other-audience", "accepted-audience").asJson))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withAcceptedAudiences("accepted-audience")
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectUnexpectedAudience") {
+    for {
+      signed <- sign(JwtClaims("aud" -> "some-audience".asJson))
+      verification <- JwtVerification.default[IO].hmac(algorithm, secretKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.UnexpectedAudience) => () }
+    } yield success
+  }
+
+  test("JwtVerification.jwkSet.rejectUnexpectedAudience") {
+    val keySet = JwkSet(octJwk("key-1"))
+    for {
+      signed <- sign(
+        JwtClaims("aud" -> "some-audience".asJson),
+        JwtHeader.default.withKeyId(JwkKeyId("key-1"))
+      )
+      verification <- JwtVerification.default[IO].jwkSetAll(keySet)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.UnexpectedAudience) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsMissingAudience") {
+    for {
+      signed <- sign(JwtClaims("sub" -> "alice".asJson))
+      verification <- JwtVerification.default[IO].hmac(algorithm, secretKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsAnyAudience") {
+    for {
+      signed <- sign(JwtClaims("aud" -> "some-audience".asJson))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withAcceptedAudiences(AcceptedAudiences.any)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.jwkSet.acceptsAnyAudience") {
+    val keySet = JwkSet(octJwk("key-1"))
+    for {
+      signed <- sign(
+        JwtClaims("aud" -> "some-audience".asJson),
+        JwtHeader.default.withKeyId(JwkKeyId("key-1"))
+      )
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .jwkSetAll(keySet)
+        .withAcceptedAudiences(AcceptedAudiences.any)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsAnyIssuer") {
+    for {
+      signed <- sign(JwtClaims("iss" -> "other-issuer".asJson))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withAcceptedIssuers("accepted-issuer")
+        .withAcceptedIssuers(AcceptedIssuers.any)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsAnySubject") {
+    for {
+      signed <- sign(JwtClaims("sub" -> "other-subject".asJson))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withAcceptedSubjects("accepted-subject")
+        .withAcceptedSubjects(AcceptedSubjects.any)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
   test("JwtVerification.rejectUnacceptedSubject") {
     for {
       signed <- sign(JwtClaims("sub" -> "other-subject".asJson))

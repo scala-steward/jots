@@ -55,6 +55,7 @@ object JwtSigningSuite extends SimpleIOSuite with Checkers {
             verification <- JwtVerificationBuilder
               .default[IO]
               .asymmetric(NonEmptyList.of(example.algorithm), example.publicKey)
+              .withAcceptedAudiences(AcceptedAudiences.any)
               .withCheckExpiration(false)
               .withCheckIssuedAt(false)
               .withCheckNotBefore(false)
@@ -126,6 +127,7 @@ object JwtSigningSuite extends SimpleIOSuite with Checkers {
         verification <- JwtVerificationBuilder
           .default[IO]
           .hmac(algorithm, secretKey)
+          .withAcceptedAudiences(AcceptedAudiences.any)
           .withCheckExpiration(false)
           .withCheckIssuedAt(false)
           .withCheckNotBefore(false)
@@ -165,6 +167,7 @@ object JwtSigningSuite extends SimpleIOSuite with Checkers {
         verification <- JwtVerificationBuilder
           .default[IO]
           .jwkSet(NonEmptyList.of(algorithm), JwkSet(publicKey))
+          .withAcceptedAudiences(AcceptedAudiences.any)
           .withCheckExpiration(false)
           .withCheckIssuedAt(false)
           .withCheckNotBefore(false)

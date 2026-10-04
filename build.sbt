@@ -37,7 +37,7 @@ inThisBuild(
     semanticdbEnabled := true,
     semanticdbVersion := scalafixSemanticdb.revision,
     startYear := Some(2026),
-    tlBaseVersion := "0.2",
+    tlBaseVersion := "0.3",
     tlCiHeaderCheck := true,
     tlCiScalafixCheck := true,
     tlCiScalafmtCheck := true,

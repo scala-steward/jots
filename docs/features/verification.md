@@ -169,10 +169,11 @@ The default `JwtVerification` instances perform the following verifications.
 - The expiration claim (`exp`), when present, is verified to be in the future.
 - The not-before claim (`nbf`), when present, is verified to not be in the future.
 - Tokens containing a set of critical headers (`crit`) will be rejected by default.
+- Similarly, tokens containing an audience claim (`aud`) will be rejected by default.
 
 #### Customizing Default Verifications
 
-Except for the signature verification, the above checks can be adjusted using `JwtVerificationBuilder`. There is also additional checks which can be enabled, like requiring certain claims to be present, and further tweaks, like accounting for clock skew. The following example requires `exp`, `iat`, and `nbf` to be present, and allows a 30 second clock skew.
+Except for the signature verification, the above checks can be adjusted using `JwtVerificationBuilder`. There is also additional checks which can be enabled, like requiring certain claims to be present, and further tweaks, like accounting for clock skew. The following example requires `exp`, `iat`, and `nbf` to be present, and allows a 30 second clock skew. It also specifies the accepted audiences and issuers.
 
 ```scala mdoc:silent
 import scala.concurrent.duration.*
@@ -181,6 +182,8 @@ val jwtVerificationCustom: IO[JwtVerification[IO]] =
   JwtVerificationBuilder
     .default[IO]
     .ecdsa(ES256, publicKey)
+    .withAcceptedAudiences("https://api.example.com")
+    .withAcceptedIssuers("https://example.auth0.com/")
     .withRequireExpiration(true)
     .withRequireIssuedAt(true)
     .withRequireNotBefore(true)

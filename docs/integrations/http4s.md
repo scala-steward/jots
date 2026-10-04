@@ -75,7 +75,7 @@ We should take care to _not_ put secrets, like `SecretKey`, in source code.
 
 ## Refreshing Verification
 
-There is `RefreshingJwtVerification` with support for periodically fetching a `JwkSet` from an HTTP endpoint and refreshing verification. The following example shows how to create a `RefreshingJwtVerification` instance. Note the example allows all supported algorithms and uses the [default refresh settings](#default-refresh-settings).
+There is `RefreshingJwtVerification` with support for periodically fetching a `JwkSet` from an HTTP endpoint and refreshing verification. The following example shows how to create a `RefreshingJwtVerification` instance, which accepts tokens issued by `https://example.auth0.com/` for the `https://api.example.com` audience. Note the example allows all supported algorithms and uses the [default refresh settings](#default-refresh-settings).
 
 ```scala mdoc:silent
 import cats.effect.Resource
@@ -86,11 +86,19 @@ val refreshingJwtVerification: Resource[IO, RefreshingJwtVerification[IO]] =
   for {
     client <- EmberClientBuilder.default[IO].build
     uri = uri"https://example.auth0.com/.well-known/jwks.json"
-    refreshing <- RefreshingJwtVerification.jwkSetAll(client, uri)
+    refreshing <- RefreshingJwtVerification.jwkSetAllWith(client, uri) { verification =>
+      verification
+        .withAcceptedAudiences("https://api.example.com")
+        .withAcceptedIssuers("https://example.auth0.com/")
+    }
   } yield refreshing
 ```
 
-If we want to restrict the allowed algorithms, we can use `jwkSet` instead of `jwkSetAll`. If we want additional custom verification, there is `refreshWith` which accepts a function with which to create the underlying `JwtVerification` from a `JwkSet`. Following is an example of using `refreshWith` to provide a custom verification function.
+@:callout(info)
+Identity providers commonly sign tokens for many applications using the same keys. Make sure to set the accepted audiences, and preferably also the accepted issuers. Tokens with an audience (`aud`) are rejected unless the audience has been accepted.
+@:@
+
+If we want to restrict the allowed algorithms, we can use `jwkSetWith` instead of `jwkSetAllWith`. There is also `jwkSet` and `jwkSetAll` if we do not need to customize the verification. If we want additional custom verification, there is `refreshWith` which accepts a function with which to create the underlying `JwtVerification` from a `JwkSet`. Following is an example of using `refreshWith` to provide a custom verification function.
 
 ```scala mdoc:silent
 import jots.JwtRsaAlgorithm
@@ -105,6 +113,8 @@ val refreshingJwtVerificationCustom: Resource[IO, RefreshingJwtVerification[IO]]
       JwtVerificationBuilder
         .default[IO]
         .jwkSet(JwtRsaAlgorithm.All, jwkSet)
+        .withAcceptedAudiences("https://api.example.com")
+        .withAcceptedIssuers("https://example.auth0.com/")
         .withRequireExpiration(true)
         .withClockSkew(30.seconds)
         .build
@@ -159,7 +169,11 @@ val refreshingJwtVerificationBuilderCustom: Resource[IO, RefreshingJwtVerificati
     client <- EmberClientBuilder.default[IO].build
     uri = uri"https://example.auth0.com/.well-known/jwks.json"
     refreshing <- RefreshingJwtVerificationBuilder
-      .jwkSet(JwtRsaAlgorithm.All, client, uri)
+      .jwkSetWith(JwtRsaAlgorithm.All, client, uri) { verification =>
+        verification
+          .withAcceptedAudiences("https://api.example.com")
+          .withAcceptedIssuers("https://example.auth0.com/")
+      }
       .withRefreshInterval(30.minutes)
       .withMinRefreshIntervalOnMissingKey(10.minutes)
       .withLogger(logger)
@@ -167,4 +181,4 @@ val refreshingJwtVerificationBuilderCustom: Resource[IO, RefreshingJwtVerificati
   } yield refreshing
 ```
 
-Note there is also `jwkSetAll` and `refreshWith` like for `RefreshingJwtVerification`.
+Note there is also `jwkSet`, `jwkSetAll`, `jwkSetAllWith` and `refreshWith` like for `RefreshingJwtVerification`.
