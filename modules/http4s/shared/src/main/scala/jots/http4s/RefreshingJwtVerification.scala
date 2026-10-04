@@ -36,6 +36,7 @@ import jots.crypto.Crypto
 import org.http4s.Uri
 import org.http4s.client.Client
 import org.http4s.client.middleware.Retry
+import org.typelevel.ci.CIString
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -309,7 +310,19 @@ object RefreshingJwtVerification {
         case Left(cause) => logger.warn(cause)("Failed to refresh key set")
       }
 
+    def isLoopback(uri: Uri): Boolean =
+      uri.host.exists {
+        case Uri.RegName(host) => host == CIString("localhost")
+        case host => host.toIpAddress.exists(_.isLoopback)
+      }
+
+    def ensureHttps: F[Unit] =
+      F.raiseWhen(requireHttps && !uri.scheme.contains(Uri.Scheme.https) && !isLoopback(uri))(
+        new IllegalArgumentException(s"the key set uri must use https, was [${uri.renderString}]")
+      )
+
     for {
+      _ <- ensureHttps.toResource
       deferred <- Deferred[F, StateResult[F]].toResource
       ref <- Ref.of[F, Phase[F]](Phase.Pending(deferred)).toResource
       _ <- Resource.onFinalize(cancel(ref))

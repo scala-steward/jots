@@ -125,6 +125,25 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
   def withRetryPolicy(retryPolicy: RetryPolicy[F]): RefreshingJwtVerificationBuilder[F]
 
   /**
+    * Returns `true` if the `Uri` is required to use HTTPS;
+    * `false` otherwise.
+    *
+    * Note HTTP is always allowed for loopback hosts.
+    *
+    * The default is to require HTTPS.
+    */
+  def requireHttps: Boolean
+
+  /**
+    * Sets whether the `Uri` is required to use HTTPS.
+    *
+    * Note HTTP is always allowed for loopback hosts.
+    *
+    * The default is to require HTTPS.
+    */
+  def withRequireHttps(requireHttps: Boolean): RefreshingJwtVerificationBuilder[F]
+
+  /**
     * Returns the `Uri` to which requests for keys should be issued.
     */
   def uri: Uri
@@ -151,6 +170,7 @@ object RefreshingJwtVerificationBuilder {
     override val refreshIntervalOnError: FiniteDuration,
     override val minRefreshIntervalOnMissingKey: FiniteDuration,
     override val retryPolicy: RetryPolicy[F],
+    override val requireHttps: Boolean,
     override val uri: Uri,
     override val verification: JwkSet => F[JwtVerification[F]]
   ) extends RefreshingJwtVerificationBuilder[F] {
@@ -190,6 +210,9 @@ object RefreshingJwtVerificationBuilder {
 
     override def withRetryPolicy(retryPolicy: RetryPolicy[F]): RefreshingJwtVerificationBuilder[F] =
       copy(retryPolicy = retryPolicy)
+
+    override def withRequireHttps(requireHttps: Boolean): RefreshingJwtVerificationBuilder[F] =
+      copy(requireHttps = requireHttps)
 
     override def build: Resource[F, RefreshingJwtVerification[F]] =
       RefreshingJwtVerification.fromBuilder(this)
@@ -291,6 +314,7 @@ object RefreshingJwtVerificationBuilder {
       refreshIntervalOnError = 60.seconds,
       minRefreshIntervalOnMissingKey = 60.seconds,
       retryPolicy = RetryPolicy(RetryPolicy.exponentialBackoff(maxWait = 5.seconds, maxRetry = 4)),
+      requireHttps = true,
       uri = uri,
       verification = verification
     )

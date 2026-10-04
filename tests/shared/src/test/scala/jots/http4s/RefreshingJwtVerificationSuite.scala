@@ -267,6 +267,44 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield expect.eql(keySet, keys) && expect.eql(2, requests.size)
   }
 
+  test("RefreshingJwtVerification.rejectInsecureUri") {
+    for {
+      testClient <- TestClient(keysResponse(keySet))
+      insecureUri = uri"http://example.com/.well-known/jwks.json"
+      result <- RefreshingJwtVerification
+        .jwkSet[IO](hmacAlgorithms, testClient.client, insecureUri)
+        .use(_.keys)
+        .attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: IllegalArgumentException) => () }
+    } yield success
+  }
+
+  test("RefreshingJwtVerification.allowLoopbackUri") {
+    List(
+      uri"http://localhost:8080/.well-known/jwks.json",
+      uri"http://127.0.0.1:8080/.well-known/jwks.json",
+      uri"http://[::1]:8080/.well-known/jwks.json"
+    ).traverse { loopbackUri =>
+      for {
+        testClient <- TestClient(keysResponse(keySet))
+        keys <- RefreshingJwtVerification
+          .jwkSet[IO](hmacAlgorithms, testClient.client, loopbackUri)
+          .use(_.keys)
+      } yield expect.eql(keySet, keys)
+    }.map(_.combineAll)
+  }
+
+  test("RefreshingJwtVerification.withRequireHttps") {
+    for {
+      testClient <- TestClient(keysResponse(keySet))
+      keys <- RefreshingJwtVerificationBuilder
+        .jwkSet[IO](hmacAlgorithms, testClient.client, uri"http://example.com/.well-known/jwks.json")
+        .withRequireHttps(false)
+        .build
+        .use(_.keys)
+    } yield expect.eql(keySet, keys)
+  }
+
   test("RefreshingJwtVerification.surfaceInitialError") {
     val error = new RuntimeException("the key set could not be fetched")
     for {
