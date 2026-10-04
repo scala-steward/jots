@@ -634,6 +634,18 @@ object JwtVerification {
         .map(_.asRight[(Jwk, JwtException)])
         .recover { case e: JwtException => (key, e).asLeft }
 
+    /*
+     * Verify with the first verification, falling back to the
+     * second verification in case the algorithm was rejected.
+     */
+    def orElseIfRejectedAlgorithm(
+      first: JwtVerification[G],
+      second: JwtVerification[G]
+    ): JwtVerification[G] =
+      JwtVerification.verifyWith { jwt =>
+        first.verify(jwt).recoverWith { case _: RejectedAlgorithm => second.verify(jwt) }
+      }
+
     keySet.toList
       .filter(isForVerification)
       .traverse(keyVerificationOrSkipped)
@@ -642,7 +654,10 @@ object JwtVerification {
         if (verifications.isEmpty) {
           val causes = skipped.map { case (_, cause) => cause }
           F.raiseError(new EmptyKeySet(causes))
-        } else F.pure(byKeyId(verifications.toMap, skipped))
+        } else {
+          val verificationByKeyId = verifications.groupMapReduce(_._1)(_._2)(orElseIfRejectedAlgorithm)
+          F.pure(byKeyId(verificationByKeyId, skipped))
+        }
       }
   }
 

@@ -392,6 +392,37 @@ object JwtVerificationSuite extends SimpleIOSuite {
     } yield success
   }
 
+  test("JwtVerification.jwkSet.verifiesKeysWithSameKeyId") {
+    val keySet = JwkSet(
+      Jwk(
+        "kty" -> "EC".asJson,
+        "kid" -> "shared".asJson,
+        "crv" -> "P-256".asJson,
+        "x" -> "p9PE1rTE7gpF4uTVOtcx9W_6MnpGGg78q50ZA90wSPw".asJson,
+        "y" -> "AEhWKMZsHgNPV7BHUCHab6gURnGfKfsCJJ6E5rlJwnc".asJson
+      ).fold(throw _, identity),
+      Jwk(
+        "kty" -> "OKP".asJson,
+        "kid" -> "shared".asJson,
+        "crv" -> "Ed25519".asJson,
+        "x" -> "WOi-Abi-43CqPVHQx8eQ3KxQRhYx2BrYmTOPonrKhJ8".asJson
+      ).fold(throw _, identity)
+    )
+
+    val builder =
+      JwtBuilder(JwtHeader.default.withKeyId(JwkKeyId("shared")), JwtClaims("sub" -> "alice".asJson))
+
+    for {
+      verification <- JwtVerification.default[IO].jwkSetAll(keySet)
+      ecdsa <- JwtSigning.default[IO].ecdsa(JwtEcdsaAlgorithm.ES256, ExampleEcdsaJwt.ES256Jwk.privateKey)
+      ecdsaResult <- builder.signWith(ecdsa).flatMap(_.verifyWith(verification)).attempt
+      _ <- matchOrFailFast[IO](ecdsaResult) { case Right(_) => () }
+      eddsa <- JwtSigning.default[IO].eddsa(JwtEddsaAlgorithm.Ed25519, ExampleEddsaJwt.EdDSAJwk.privateKey)
+      eddsaResult <- builder.signWith(eddsa).flatMap(_.verifyWith(verification)).attempt
+      _ <- matchOrFailFast[IO](eddsaResult) { case Right(_) => () }
+    } yield success
+  }
+
   test("JwtVerification.jwkSet.rejectUnknownKeyId") {
     val keySet = JwkSet(octJwk("key-1"))
     for {
