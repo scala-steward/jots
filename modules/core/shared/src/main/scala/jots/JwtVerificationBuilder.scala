@@ -317,6 +317,7 @@ object JwtVerificationBuilder {
     /**
       * Returns a new [[JwtVerificationBuilder]] instance which verifies
       * tokens using all recognized ECDSA algorithms and a public key.
+      * Only the algorithm for the curve of the public key is accepted.
       */
     def ecdsaAll(
       publicKey: PublicKey
@@ -361,6 +362,7 @@ object JwtVerificationBuilder {
     /**
       * Returns a new [[JwtVerificationBuilder]] instance which verifies
       * tokens using all recognized EdDSA algorithms and a public key.
+      * Only the algorithm for the curve of the public key is accepted.
       */
     def eddsaAll(
       publicKey: PublicKey
@@ -490,6 +492,7 @@ object JwtVerificationBuilder {
     /**
       * Returns a new [[JwtVerificationBuilder]] instance which verifies
       * tokens using all recognized RSA algorithms and a public key.
+      * Only RSA-PSS algorithms are accepted for RSA-PSS public keys.
       */
     def rsaAll(
       publicKey: PublicKey
@@ -634,12 +637,6 @@ private[jots] final case class JwtAsymmetricVerificationBuilder[
   algorithms: NonEmptyList[JwtAsymmetricAlgorithm],
   publicKey: PublicKey
 ) extends JwtVerificationBuilder[F, G] {
-  private val algorithmByName: NonEmptyMap[String, JwtAsymmetricAlgorithm] =
-    algorithms.groupByNem(_.name).map(_.head)
-
-  def algorithmWithName(name: String): Option[JwtAsymmetricAlgorithm] =
-    algorithmByName(name)
-
   override def withAcceptedAudiences(audiences: AcceptedAudiences): JwtVerificationBuilder[F, G] =
     copy(acceptedAudiences = audiences)
 

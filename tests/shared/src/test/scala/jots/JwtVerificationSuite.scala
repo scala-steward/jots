@@ -79,6 +79,13 @@ object JwtVerificationSuite extends SimpleIOSuite {
     JwtBuilder(header, JwtClaims.empty).toSigned(JwtSignature.empty)
 
   /**
+    * Returns a [[SignedJwt]] with the specified algorithm and signature.
+    */
+  private def tokenWithAlgorithm(algorithm: JwtAlgorithm, signature: ByteVector): SignedJwt =
+    JwtBuilder(JwtHeader.default.withAlgorithm(algorithm), JwtClaims.empty)
+      .toSigned(JwtSignature(signature))
+
+  /**
     * Returns a [[JwtHeader]] with the specified header name
     * present and a `crit` parameter with the header name.
     */
@@ -633,6 +640,59 @@ object JwtVerificationSuite extends SimpleIOSuite {
     for {
       result <- JwtVerification.default[IO].ecdsa(JwtEcdsaAlgorithm.ES256, publicKey).attempt
       _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidEcKeyLength) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectAlgorithmForOtherEcdsaCurve") {
+    val example = ExampleEcdsaJwt.ES256Pkcs8
+
+    for {
+      signing <- JwtSigningBuilder
+        .default[IO]
+        .ecdsa(JwtEcdsaAlgorithm.ES512, example.privateKey)
+        .withCheckKeyRequirements(false)
+        .build
+      signed <- example.builder.signWith(signing)
+      verification <- JwtVerification.default[IO].ecdsaAll(example.publicKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.RejectedAlgorithm) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectAlgorithmForOtherEddsaCurve") {
+    val example = ExampleEddsaJwt.Ed25519Pkcs8
+    val signed = tokenWithAlgorithm(JwtAlgorithm.Ed448, ByteVector.fill(114)(1))
+
+    for {
+      verification <- JwtVerification.default[IO].eddsaAll(example.publicKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.RejectedAlgorithm) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectPkcs1AlgorithmForPssKey") {
+    val example = ExampleRsaJwt.PS256Pkcs1PssRestricted
+    val signed = tokenWithAlgorithm(JwtAlgorithm.RS256, example.signedJwt.signature.toByteVector)
+
+    for {
+      verification <- JwtVerification.default[IO].rsaAll(example.publicKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.RejectedAlgorithm) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectUnusablePublicKey") {
+    val publicKey = PublicKey.fromX509Spki(ByteVector(1, 2, 3))
+    val signed = tokenWithAlgorithm(JwtAlgorithm.RS256, ByteVector.fill(256)(1))
+
+    for {
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .rsa(JwtRsaAlgorithm.RS256, publicKey)
+        .withCheckKeyRequirements(false)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.SignatureVerificationFailed) => () }
     } yield success
   }
 

@@ -21,9 +21,14 @@ import cats.data.OptionT
 import cats.effect.IO
 import cats.syntax.all.*
 import io.circe.DecodingFailure
+import jots.ExampleEddsaJwt
 import jots.ExampleHmacJwt
 import jots.ExampleJwt
+import jots.JwtAlgorithm
+import jots.JwtBuilder
 import jots.JwtDecoder
+import jots.JwtHeader
+import jots.JwtSignature
 import jots.JwtVerification
 import jots.SignedJwt
 import org.http4s.AuthScheme
@@ -35,6 +40,7 @@ import org.http4s.Response
 import org.http4s.Status
 import org.http4s.headers.Authorization
 import org.http4s.headers.`WWW-Authenticate`
+import scodec.bits.ByteVector
 import weaver.SimpleIOSuite
 
 object JwtAuthMiddlewareSuite extends SimpleIOSuite {
@@ -89,6 +95,19 @@ object JwtAuthMiddlewareSuite extends SimpleIOSuite {
     for {
       verification <- ExampleHmacJwt.HS384.verification
       response <- respondTo(verification, requestWith(ExampleHmacJwt.HS256.signedJwt))
+    } yield expect.eql(Status.Unauthorized, response.status) &&
+      expect.eql(invalidChallenge, challengeOf(response))
+  }
+
+  test("JwtAuthMiddleware.rejectAlgorithmForOtherCurve") {
+    val example = ExampleEddsaJwt.Ed25519Pkcs8
+    val signedJwt =
+      JwtBuilder(JwtHeader.default.withAlgorithm(JwtAlgorithm.Ed448), example.claims)
+        .toSigned(JwtSignature(ByteVector.fill(114)(1)))
+
+    for {
+      verification <- JwtVerification.default[IO].eddsaAll(example.publicKey)
+      response <- respondTo(verification, requestWith(signedJwt))
     } yield expect.eql(Status.Unauthorized, response.status) &&
       expect.eql(invalidChallenge, challengeOf(response))
   }

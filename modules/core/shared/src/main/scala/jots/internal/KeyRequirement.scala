@@ -45,6 +45,19 @@ private[jots] object KeyRequirement {
   final case class Eddsa(bits: Int) extends KeyRequirement
 
   /**
+    * Returns `true` if the key is of the type of the requirement, and for
+    * ECDSA and EdDSA keys, the curve bit length matches the requirement.
+    * Unlike [[check]], the RSA modulus bit length is not checked.
+    */
+  def matches(requirement: KeyRequirement, keyLength: KeyLength): Boolean =
+    (requirement, keyLength) match {
+      case (Rsa(_), KeyLength.Rsa(_)) => true
+      case (Ecdsa(bits), KeyLength.Ecdsa(keyBits)) => bits == keyBits
+      case (Eddsa(bits), KeyLength.Eddsa(keyBits)) => bits == keyBits
+      case _ => false
+    }
+
+  /**
     * Checks the specified key length against a single requirement.
     */
   def check[F[_]: ApplicativeThrow](requirement: KeyRequirement, keyLength: KeyLength): F[Unit] =

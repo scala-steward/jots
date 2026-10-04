@@ -310,6 +310,13 @@ object JwtException {
     extends JwtException(s"the token subject (sub) [$subject] was rejected")
 
   /**
+    * Exception raised by [[JwtVerification]] when the token signature could
+    * not be verified, for example because the public key could not be used.
+    */
+  final class SignatureVerificationFailed(cause: Throwable)
+    extends JwtException("the token signature could not be verified", Some(cause))
+
+  /**
     * Exception raised when the `exp` expiration time has been reached.
     */
   final class TokenExpired(expiresAt: FiniteDuration)
