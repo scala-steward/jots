@@ -184,6 +184,19 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield success
   }
 
+  test("RefreshingJwtVerification.jwkSetAll.rejectHmac") {
+    for {
+      signed <- sign("key-1")
+      testClient <- TestClient(keysResponse(keySet))
+      result <- RefreshingJwtVerificationBuilder
+        .jwkSetAll[IO](testClient.client, uri)
+        .withRetryPolicy(noRetries)
+        .build
+        .use(_.verify(signed).attempt)
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException) => () }
+    } yield success
+  }
+
   test("RefreshingJwtVerification.refreshWith") {
     val error = new RuntimeException("the token could not be verified")
     for {
