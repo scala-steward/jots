@@ -178,6 +178,18 @@ object JwtSigningSuite extends SimpleIOSuite with Checkers {
     }
   }
 
+  test("JwtSigning.jwk.eddsaKeyAlgorithm") {
+    forall(eddsaSigningKeyGen) { case (algorithm, privateKey, publicKey) =>
+      val eddsa = "alg" -> "EdDSA".asJson
+      for {
+        signing <- JwtSigning.default[IO].jwk(algorithm, withFields(privateKey, eddsa))
+        signed <- JwtBuilder.default.signWith(signing)
+        verification <- JwtVerification.default[IO].jwkSetAll(JwkSet(withFields(publicKey, eddsa)))
+        _ <- signed.verifyWith(verification)
+      } yield expect.eql(Some("EdDSA"), signed.header.toJsonObject("alg").flatMap(_.asString))
+    }
+  }
+
   test("JwtSigning.jwk.setsKeyId") {
     for {
       signing <- JwtSigning.default[IO].jwk(HS256, octJwk(secretKey))

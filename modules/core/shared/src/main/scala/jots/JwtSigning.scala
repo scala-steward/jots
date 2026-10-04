@@ -205,7 +205,7 @@ object JwtSigning {
   )(implicit F: MonadThrow[F], G: Functor[G], crypto: Crypto[G]): F[JwtSigning[G]] = {
     import builder.*
 
-    def signing(keyId: Option[JwkKeyId]): F[JwtSigning[G]] = {
+    def signing(keyId: Option[JwkKeyId], algorithm: JwtAlgorithm): F[JwtSigning[G]] = {
       def withKeyId(signing: JwtSigning[G]): JwtSigning[G] =
         keyId match {
           case Some(keyId) => signing.mapJwt(_.mapHeader(_.withKeyId(keyId)))
@@ -268,16 +268,18 @@ object JwtSigning {
       _ <- ensureSuitableForSigning(keyId)
       signing <- key.toJsonObject("alg") match {
         case Some(algorithmJson) =>
-          algorithmJson.asString match {
-            case Some(algorithmName) if algorithmMatches(algorithmName) =>
-              signing(keyId)
-            case Some(algorithmName) =>
+          (algorithmJson.asString, algorithm) match {
+            case (Some(algorithmName), _) if algorithmMatches(algorithmName) =>
+              signing(keyId, algorithm)
+            case (Some("EdDSA"), algorithm: JwtEddsaAlgorithm) =>
+              signing(keyId, algorithm.asEdDSA)
+            case (Some(algorithmName), _) =>
               F.raiseError(new RejectedKeyAlgorithm(keyId, algorithmName, NonEmptyList.one(algorithm)))
-            case None =>
+            case (None, _) =>
               F.raiseError(new InvalidKeyAlgorithm(keyId, algorithmJson))
           }
         case None =>
-          signing(keyId)
+          signing(keyId, algorithm)
       }
     } yield signing
   }

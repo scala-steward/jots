@@ -413,11 +413,14 @@ object JwtVerification {
         }
       }
 
-    val algorithmByName: Map[String, JwtAsymmetricAlgorithm] =
-      keyAlgorithms(algorithms, keyLength, KeyAlgorithm.isRsaPss(publicKey))
+    val algorithmByName: Map[String, JwtAsymmetricAlgorithm] = {
+      val usable = keyAlgorithms(algorithms, keyLength, KeyAlgorithm.isRsaPss(publicKey))
+      val aliases = usable.collect { case algorithm: JwtEddsaAlgorithm => algorithm.asEdDSA }
+      (usable ++ aliases)
         .distinctBy(_.name)
         .map(algorithm => algorithm.name -> algorithm)
         .toMap
+    }
 
     ensureKeyRequirements.as {
       new JwtVerification[G] {
@@ -592,7 +595,7 @@ object JwtVerification {
           key.keyId.liftTo[F].flatMap { keyId =>
             algorithmJson.asString match {
               case Some(algorithmName) =>
-                algorithmWithName(algorithmName) match {
+                algorithmWithName(algorithmName).orElse(eddsaAlgorithm(algorithmName, key)) match {
                   case Some(algorithm) => verify(algorithm, key)
                   case None => F.raiseError(new RejectedKeyAlgorithm(keyId.some, algorithmName, algorithms))
                 }
@@ -603,6 +606,20 @@ object JwtVerification {
         case None =>
           verifyAll(key)
       }
+
+    /*
+     * Returns the accepted EdDSA algorithm for the curve (crv) of the key,
+     * when the key has the generic EdDSA algorithm, used for all curves.
+     */
+    def eddsaAlgorithm(algorithmName: String, key: Jwk): Option[JwtAlgorithm] =
+      if (algorithmName == "EdDSA") {
+        key.toJsonObject("crv").flatMap(_.asString).flatMap { curve =>
+          algorithms.find {
+            case algorithm: JwtEddsaAlgorithm => algorithm.asymmetricAlgorithm.name == curve
+            case _ => false
+          }
+        }
+      } else None
 
     /*
      * Returns whether the key may be used for signature verification.

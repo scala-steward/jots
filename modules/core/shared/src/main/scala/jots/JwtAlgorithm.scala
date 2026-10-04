@@ -265,6 +265,9 @@ sealed abstract class JwtEddsaAlgorithm extends JwtAsymmetricAlgorithm {
     * Ed25519 and Ed448 curves. However, because of ambiguity
     * regarding which curve was used to sign the token, the
     * name was deprecated in favour of Ed25519 and Ed448.
+    *
+    * Note verification also accepts the `EdDSA` name for the
+    * Ed25519 and Ed448 algorithm matching the key curve.
     */
   def asEdDSA: JwtEddsaAlgorithm
 }
