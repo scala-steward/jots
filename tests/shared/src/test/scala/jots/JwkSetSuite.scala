@@ -40,4 +40,9 @@ object JwkSetSuite extends SimpleIOSuite with Checkers with Discipline {
       expect.eql(Right(set), set.toJson.as[JwkSet])
     }
   }
+
+  pureTest("JwkSet.fromString.rejectNested") {
+    val nested = s"""{"kty":"oct","nested":${"[" * 1000}${"]" * 1000}}"""
+    expect(JwkSet.fromString(s"""{"keys":[$nested]}""").isLeft)
+  }
 }

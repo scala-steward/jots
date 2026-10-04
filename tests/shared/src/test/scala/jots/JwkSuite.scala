@@ -38,4 +38,8 @@ object JwkSuite extends SimpleIOSuite with Checkers with Discipline {
       expect.eql(Right(jwk), jwk.toJson.as[Jwk])
     }
   }
+
+  pureTest("Jwk.fromString.rejectNested") {
+    expect(Jwk.fromString(s"""{"kty":"oct","nested":${"[" * 1000}${"]" * 1000}}""").isLeft)
+  }
 }

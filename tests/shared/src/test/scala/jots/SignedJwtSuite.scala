@@ -18,7 +18,9 @@ package jots
 
 import cats.kernel.laws.discipline.HashTests
 import io.circe.syntax.*
+import java.nio.charset.StandardCharsets.UTF_8
 import jots.testing.*
+import scodec.bits.ByteVector
 import weaver.SimpleIOSuite
 import weaver.discipline.Discipline
 import weaver.scalacheck.Checkers
@@ -39,4 +41,19 @@ object SignedJwtSuite extends SimpleIOSuite with Checkers with Discipline {
   pureTest("SignedJwt.toUnsigned") {
     forEach(ExampleJwt.All)(example => expect.eql(example.builder, example.signedJwt.toBuilder))
   }
+
+  pureTest("SignedJwt.fromString.rejectNestedHeader") {
+    val header = base64UrlNoPad(s"""{"alg":"HS256","nested":${"[" * 1000}${"]" * 1000}}""")
+    val claims = base64UrlNoPad("""{"sub":"alice"}""")
+    expect(SignedJwt.fromString(s"$header.$claims.c2lnbmF0dXJl").isLeft)
+  }
+
+  pureTest("SignedJwt.fromString.rejectNestedClaims") {
+    val header = base64UrlNoPad("""{"alg":"HS256"}""")
+    val claims = base64UrlNoPad(s"""{"nested":${"[" * 1000}${"]" * 1000}}""")
+    expect(SignedJwt.fromString(s"$header.$claims.c2lnbmF0dXJl").isLeft)
+  }
+
+  private def base64UrlNoPad(json: String): String =
+    ByteVector.view(json.getBytes(UTF_8)).toBase64UrlNoPad
 }
