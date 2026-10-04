@@ -659,6 +659,16 @@ object JwtVerificationSuite extends SimpleIOSuite {
     } yield success
   }
 
+  test("JwtVerification.eddsaAll.acceptsEdDSA") {
+    val example = ExampleEddsaJwt.EdDSAPkcs8
+
+    for {
+      verification <- JwtVerification.default[IO].eddsaAll(example.publicKey)
+      result <- example.signedJwt.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
   test("JwtVerification.rejectAlgorithmForOtherEddsaCurve") {
     val example = ExampleEddsaJwt.Ed25519Pkcs8
     val signed = tokenWithAlgorithm(JwtAlgorithm.Ed448, ByteVector.fill(114)(1))
