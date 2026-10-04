@@ -441,7 +441,9 @@ object JwtVerificationBuilder {
       * from the key set; a token referencing such a key is rejected. A
       * key is excluded when it has no key id (kid), since keys are
       * selected by key id, or when its `use` or `key_ops` parameters
-      * indicate it is not meant for signature verification.
+      * indicate it is not meant for signature verification. Keys
+      * which are not supported, or have no accepted algorithm, are
+      * also excluded.
       */
     def jwkSet(
       algorithms: NonEmptyList[JwtAlgorithm],
@@ -462,7 +464,9 @@ object JwtVerificationBuilder {
       * from the key set; a token referencing such a key is rejected. A
       * key is excluded when it has no key id (kid), since keys are
       * selected by key id, or when its `use` or `key_ops` parameters
-      * indicate it is not meant for signature verification.
+      * indicate it is not meant for signature verification. Keys
+      * which are not supported, or have no accepted algorithm, are
+      * also excluded.
       */
     def jwkSetAll(
       keySet: JwkSet

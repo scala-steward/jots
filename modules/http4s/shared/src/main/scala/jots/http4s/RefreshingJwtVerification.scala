@@ -33,6 +33,7 @@ import jots.JwtVerificationBuilder
 import jots.SignedJwt
 import jots.VerifiedJwt
 import jots.crypto.Crypto
+import jots.internal.SkippedKeys
 import org.http4s.Uri
 import org.http4s.client.Client
 import org.http4s.client.middleware.Retry
@@ -212,8 +213,19 @@ object RefreshingJwtVerification {
       for {
         keys <- retryClient.expect[JwkSet](uri)
         verification <- builder.verification(keys)
+        _ <- logSkippedKeys(verification)
         state <- State.next(keys, verification)
       } yield state
+
+    def logSkippedKeys(verification: JwtVerification[F]): F[Unit] =
+      verification match {
+        case verification: SkippedKeys =>
+          verification.skippedKeys.traverseVoid { case (key, reason) =>
+            logger.warn(reason)(s"Skipped key ${key.show} which cannot be used for verification")
+          }
+        case _ =>
+          F.unit
+      }
 
     def refreshState(ref: PhaseRef[F]): F[Unit] =
       for {

@@ -125,7 +125,28 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
         .withRetryPolicy(noRetries)
         .build
         .use(_.keys.attempt)
-      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.RejectedKeyAlgorithm) => () }
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.EmptyKeySet) => () }
+    } yield success
+  }
+
+  test("RefreshingJwtVerification.jwkSet.skipsUnusableKeys") {
+    val rejectedKey =
+      Jwk(
+        "kty" -> "oct".asJson,
+        "kid" -> "key-2".asJson,
+        "alg" -> "HS384".asJson,
+        "k" -> secretKey.toByteVector.toBase64UrlNoPad.asJson
+      ).fold(throw _, identity)
+
+    for {
+      signed <- sign("key-1")
+      testClient <- TestClient(keysResponse(JwkSet(octJwk("key-1"), rejectedKey)))
+      result <- RefreshingJwtVerificationBuilder
+        .jwkSet[IO](hmacAlgorithms, testClient.client, uri)
+        .withRetryPolicy(noRetries)
+        .build
+        .use(_.verify(signed).attempt)
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
     } yield success
   }
 
