@@ -17,7 +17,10 @@
 package jots
 
 package object testing
-  extends AsymmetricAlgorithmInstances
+  extends AcceptedAudiencesInstances
+  with AcceptedIssuersInstances
+  with AcceptedSubjectsInstances
+  with AsymmetricAlgorithmInstances
   with AsymmetricKeyInstances
   with HashAlgorithmInstances
   with JwkInstances

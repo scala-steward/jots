@@ -328,6 +328,16 @@ object JwtException {
     extends JwtException(s"the token is not valid before ${notBefore.toSeconds} epoch seconds")
 
   /**
+    * Exception raised by [[JwtVerification]] when a token has an `aud` audience
+    * but the accepted audiences are [[AcceptedAudiences.none]], which is the
+    * default when no accepted audiences have been set.
+    */
+  final class UnexpectedAudience(audience: Json)
+    extends JwtException(
+      s"the token audience (aud) [${audience.noSpaces}] was rejected since no audiences are accepted"
+    )
+
+  /**
     * Exception raised when creating a [[JwtSigning]] with a [[Jwk]] that is
     * not suitable for signing, as detailed by the specified `details`.
     */

@@ -129,6 +129,23 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield success
   }
 
+  test("RefreshingJwtVerification.jwkSetWith") {
+    for {
+      accepted <- signWithAudience("key-1", "accepted-audience")
+      other <- signWithAudience("key-1", "other-audience")
+      testClient <- TestClient(keysResponse(keySet))
+      algorithms = NonEmptyList.of(JwtAlgorithm.HS256)
+      result <- RefreshingJwtVerification
+        .jwkSetWith[IO](algorithms, testClient.client, uri)(_.withAcceptedAudiences("accepted-audience"))
+        .use(verification =>
+          (verification.verify(accepted).attempt, verification.verify(other).attempt).tupled
+        )
+      (acceptedResult, otherResult) = result
+      _ <- matchOrFailFast[IO](acceptedResult) { case Right(_) => () }
+      _ <- matchOrFailFast[IO](otherResult) { case Left(_: JwtException.RejectedAudience) => () }
+    } yield success
+  }
+
   test("RefreshingJwtVerification.jwkSetAll") {
     for {
       signed <- sign("key-1")
@@ -137,6 +154,33 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
         .jwkSetAll[IO](testClient.client, uri)
         .use(_.verify(signed).attempt)
       _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("RefreshingJwtVerification.jwkSetAll.rejectUnexpectedAudience") {
+    for {
+      signed <- signWithAudience("key-1", "some-audience")
+      testClient <- TestClient(keysResponse(keySet))
+      result <- RefreshingJwtVerification
+        .jwkSetAll[IO](testClient.client, uri)
+        .use(_.verify(signed).attempt)
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.UnexpectedAudience) => () }
+    } yield success
+  }
+
+  test("RefreshingJwtVerification.jwkSetAllWith") {
+    for {
+      accepted <- signWithAudience("key-1", "accepted-audience")
+      other <- signWithAudience("key-1", "other-audience")
+      testClient <- TestClient(keysResponse(keySet))
+      result <- RefreshingJwtVerification
+        .jwkSetAllWith[IO](testClient.client, uri)(_.withAcceptedAudiences("accepted-audience"))
+        .use(verification =>
+          (verification.verify(accepted).attempt, verification.verify(other).attempt).tupled
+        )
+      (acceptedResult, otherResult) = result
+      _ <- matchOrFailFast[IO](acceptedResult) { case Right(_) => () }
+      _ <- matchOrFailFast[IO](otherResult) { case Left(_: JwtException.RejectedAudience) => () }
     } yield success
   }
 
@@ -547,10 +591,20 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     signWith(JwtHeader.default.withKeyId(JwkKeyId(keyId)), secretKey)
 
   private def signWith(header: JwtHeader, secretKey: SecretKey): IO[SignedJwt] =
+    signWith(header, claims, secretKey)
+
+  private def signWith(header: JwtHeader, claims: JwtClaims, secretKey: SecretKey): IO[SignedJwt] =
     JwtSigning
       .default[IO]
       .hmac(JwtHmacAlgorithm.HS256, secretKey)
       .flatMap(JwtBuilder(header, claims).signWith)
+
+  private def signWithAudience(keyId: String, audience: String): IO[SignedJwt] =
+    signWith(
+      JwtHeader.default.withKeyId(JwkKeyId(keyId)),
+      claims.add("aud", audience.asJson),
+      secretKey
+    )
 
   private def octJwk(keyId: String): Jwk =
     Jwk(
