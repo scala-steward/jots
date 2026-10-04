@@ -357,10 +357,10 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
   }
 
   test("RefreshingJwtVerification.skipsUndecodableKeys") {
-    val keys = s"""{"keys":[${octJwk("key-1").toJson.noSpaces},{"kid":"key-2"}]}"""
+    val keySetJson = s"""{"keys":[${octJwk("key-1").toJson.noSpaces},{"kid":"key-2"}]}"""
     for {
       signed <- sign("key-1")
-      testClient <- TestClient(jsonResponse(keys))
+      testClient <- TestClient(jsonResponse(keySetJson))
       result <- builder(testClient.client).build.use { verification =>
         (verification.keys, verification.verify(signed)).tupled.attempt
       }
