@@ -31,6 +31,7 @@ import jots.crypto.SecretKey
 import jots.crypto.internal.KeyAlgorithm
 import jots.internal.KeyLength
 import jots.internal.KeyRequirement
+import jots.internal.SkippedKeys
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
@@ -243,7 +244,9 @@ object JwtVerification {
       * from the key set; a token referencing such a key is rejected. A
       * key is excluded when it has no key id (kid), since keys are
       * selected by key id, or when its `use` or `key_ops` parameters
-      * indicate it is not meant for signature verification.
+      * indicate it is not meant for signature verification. Keys
+      * which are not supported, or have no accepted algorithm, are
+      * also excluded.
       */
     def jwkSet(
       algorithms: NonEmptyList[JwtAlgorithm],
@@ -264,7 +267,9 @@ object JwtVerification {
       * from the key set; a token referencing such a key is rejected. A
       * key is excluded when it has no key id (kid), since keys are
       * selected by key id, or when its `use` or `key_ops` parameters
-      * indicate it is not meant for signature verification.
+      * indicate it is not meant for signature verification. Keys
+      * which are not supported, or have no accepted algorithm, are
+      * also excluded.
       */
     def jwkSetAll(
       keySet: JwkSet
@@ -556,8 +561,14 @@ object JwtVerification {
         }
       }
 
-    def byKeyId(verifications: Map[JwkKeyId, JwtVerification[G]]): JwtVerification[G] =
-      new JwtVerification[G] {
+    def byKeyId(
+      verifications: Map[JwkKeyId, JwtVerification[G]],
+      skipped: List[(Jwk, JwtException)]
+    ): JwtVerification[G] =
+      new JwtVerification[G] with SkippedKeys {
+        override val skippedKeys: List[(Jwk, JwtException)] =
+          skipped
+
         override def verify(jwt: SignedJwt): G[VerifiedJwt] =
           jwt.header.toJsonObject("kid") match {
             case Some(keyId) =>
@@ -601,10 +612,21 @@ object JwtVerification {
         key.toJsonObject("use").forall(_.asString.contains("sig")) &&
         key.toJsonObject("key_ops").forall(_.as[List[String]].exists(_.contains("verify")))
 
-    NonEmptyList
-      .fromList(keySet.toList.filter(isForVerification))
-      .map(_.traverse(keyVerification).map(_.toList.toMap).map(byKeyId))
-      .getOrElse(F.raiseError(new EmptyKeySet()))
+    def keyVerificationOrSkipped(key: Jwk): F[Either[(Jwk, JwtException), (JwkKeyId, JwtVerification[G])]] =
+      keyVerification(key)
+        .map(_.asRight[(Jwk, JwtException)])
+        .recover { case e: JwtException => (key, e).asLeft }
+
+    keySet.toList
+      .filter(isForVerification)
+      .traverse(keyVerificationOrSkipped)
+      .flatMap { results =>
+        val (skipped, verifications) = results.partitionMap(identity)
+        if (verifications.isEmpty) {
+          val causes = skipped.map { case (_, cause) => cause }
+          F.raiseError(new EmptyKeySet(causes))
+        } else F.pure(byKeyId(verifications.toMap, skipped))
+      }
   }
 
   private implicit val finiteDurationDecoder: Decoder[FiniteDuration] =

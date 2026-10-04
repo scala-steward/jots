@@ -35,7 +35,11 @@ object JwtException {
     * Exception raised when creating a [[JwtVerification]] with a
     * [[JwkSet]] that contains no keys for signature verification.
     */
-  final class EmptyKeySet() extends JwtException("the key set has no keys for signature verification")
+  final class EmptyKeySet(causes: List[JwtException] = Nil)
+    extends JwtException(
+      if (causes.isEmpty) "the key set has no keys for signature verification"
+      else causes.map(_.message).mkString("the key set has no keys for signature verification: ", "; ", "")
+    )
 
   /**
     * Exception raised by [[JwtVerification]] when a
