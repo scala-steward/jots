@@ -267,6 +267,18 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield expect.eql(keySet, keys) && expect.eql(2, requests.size)
   }
 
+  test("RefreshingJwtVerification.rejectInsecureUri") {
+    for {
+      testClient <- TestClient(keysResponse(keySet))
+      insecureUri = uri"http://example.com/.well-known/jwks.json"
+      result <- RefreshingJwtVerification
+        .jwkSet[IO](hmacAlgorithms, testClient.client, insecureUri)
+        .use(_.keys)
+        .attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: IllegalArgumentException) => () }
+    } yield success
+  }
+
   test("RefreshingJwtVerification.surfaceInitialError") {
     val error = new RuntimeException("the key set could not be fetched")
     for {
