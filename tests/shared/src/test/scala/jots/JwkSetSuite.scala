@@ -19,6 +19,7 @@ package jots
 import cats.Show
 import cats.kernel.laws.discipline.HashTests
 import cats.syntax.all.*
+import io.circe.Json
 import jots.testing.*
 import weaver.SimpleIOSuite
 import weaver.discipline.Discipline
@@ -39,5 +40,15 @@ object JwkSetSuite extends SimpleIOSuite with Checkers with Discipline {
     forall { (set: JwkSet) =>
       expect.eql(Right(set), set.toJson.as[JwkSet])
     }
+  }
+
+  pureTest("JwkSet.fromString.rejectNested") {
+    val nested = s"""{"kty":"oct","nested":${"[" * 1000}${"]" * 1000}}"""
+    expect(JwkSet.fromString(s"""{"keys":[$nested]}""").isLeft)
+  }
+
+  pureTest("JwkSet.decoder.rejectNested") {
+    val nested = (1 to 1000).foldLeft(Json.arr())((json, _) => Json.arr(json))
+    expect(Json.obj("keys" -> Json.arr(), "nested" -> nested).as[JwkSet].isLeft)
   }
 }

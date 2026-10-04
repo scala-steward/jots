@@ -38,6 +38,7 @@ import jots.crypto.PublicKey
 import jots.crypto.SecretKey
 import jots.crypto.internal.asn1.Asn1
 import jots.crypto.internal.asn1.Oid
+import jots.internal.JsonDepth
 import scodec.bits.Bases.Alphabets.Base64UrlNoPad
 import scodec.bits.ByteVector
 
@@ -176,7 +177,7 @@ object Jwk {
     }
 
   implicit val jwkDecoder: Decoder[Jwk] =
-    Decoder[JsonObject].emap(fromJsonObject(_).leftMap(_.message))
+    JsonDepth.decoder(Decoder[JsonObject]).emap(fromJsonObject(_).leftMap(_.message))
 
   implicit val jwkEncoder: Encoder[Jwk] =
     Encoder.instance(_.toJson)
@@ -204,7 +205,7 @@ object Jwk {
     JawnParser(allowDuplicateKeys = false)
 
   private def decode(s: String): Either[Error, JsonObject] =
-    parser.decodeCharSequence[JsonObject](s)
+    JsonDepth.decode[JsonObject](parser, s)
 }
 
 private[jots] object JwkEc {
