@@ -1476,7 +1476,7 @@ object ExampleRsaJwt {
       RS512Pkcs8AndX509Certificate
     )
 
-  val exampleRsaJwtGen: Gen[ExampleRsaJwt] =
+  lazy val exampleRsaJwtGen: Gen[ExampleRsaJwt] =
     Gen.oneOf(All)
 
   implicit val exampleRsaJwtArbitrary: Arbitrary[ExampleRsaJwt] =

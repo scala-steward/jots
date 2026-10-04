@@ -351,7 +351,7 @@ object ExampleEcdsaJwt {
       ES512Sec1AndX509Certificate
     )
 
-  val exampleEcdsaJwtGen: Gen[ExampleEcdsaJwt] =
+  lazy val exampleEcdsaJwtGen: Gen[ExampleEcdsaJwt] =
     Gen.oneOf(All)
 
   implicit val exampleEcdsaJwtArbitrary: Arbitrary[ExampleEcdsaJwt] =
