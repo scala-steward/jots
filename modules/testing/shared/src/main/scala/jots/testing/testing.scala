@@ -20,6 +20,7 @@ package object testing
   extends AcceptedAudiencesInstances
   with AcceptedIssuersInstances
   with AcceptedSubjectsInstances
+  with AcceptedTypesInstances
   with AsymmetricAlgorithmInstances
   with AsymmetricKeyInstances
   with HashAlgorithmInstances

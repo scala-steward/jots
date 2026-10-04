@@ -669,7 +669,9 @@ object JwtVerification {
     header: SignedJwtHeader
   ): G[Unit] = {
     import builder.*
-    verifyCriticalHeaders(header, criticalHeaders)
+
+    verifyCriticalHeaders(header, criticalHeaders) *>
+      verifyType(header, acceptedTypes)
   }
 
   private def verifyCriticalHeaders[F[_], G[_]](
@@ -694,6 +696,41 @@ object JwtVerification {
       case None =>
         G.unit
     }
+
+  private def verifyType[F[_]](
+    header: SignedJwtHeader,
+    accepted: AcceptedTypes
+  )(implicit F: ApplicativeThrow[F]): F[Unit] =
+    accepted match {
+      case AcceptedTypes.OneOf(accepted) => verifyTypeOneOf(header, accepted)
+      case AcceptedTypes.AnyType => F.unit
+    }
+
+  private def verifyTypeOneOf[F[_]](
+    header: SignedJwtHeader,
+    accepted: NonEmptyList[String]
+  )(implicit F: ApplicativeThrow[F]): F[Unit] =
+    header.toJsonObject("typ") match {
+      case Some(typ) =>
+        typ.as[String] match {
+          case Right(typ) if accepted.exists(isSameMediaType(_, typ)) => F.unit
+          case Right(typ) => F.raiseError(new RejectedType(typ))
+          case Left(_) => F.raiseError(new InvalidType(typ))
+        }
+      case None =>
+        F.raiseError(new MissingType())
+    }
+
+  /*
+   * Media types are case-insensitive, and types without
+   * a "/" have an implied "application/" prefix.
+   */
+  private def isSameMediaType(first: String, second: String): Boolean = {
+    def mediaType(typ: String): String =
+      if (typ.contains('/')) typ else s"application/$typ"
+
+    mediaType(first).equalsIgnoreCase(mediaType(second))
+  }
 
   private def verifyClaims[F[_], G[_]: Clock: MonadThrow](
     builder: JwtVerificationBuilder[F, G],

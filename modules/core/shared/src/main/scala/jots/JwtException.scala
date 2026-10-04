@@ -208,6 +208,12 @@ object JwtException {
     extends JwtException(s"the token subject (sub) [${subject.noSpaces}] is invalid")
 
   /**
+    * Exception raised when the `typ` type is not a `String`.
+    */
+  final class InvalidType(`type`: Json)
+    extends JwtException(s"the token type (typ) [${`type`.noSpaces}] is invalid")
+
+  /**
     * Exception raised by [[JwtVerification]] when a token is missing the `alg` algorithm.
     */
   final class MissingAlgorithm() extends JwtException("the token header is missing the algorithm (alg)")
@@ -265,6 +271,11 @@ object JwtException {
   final class MissingSubject() extends JwtException("the token claims are missing the subject (sub)")
 
   /**
+    * Exception raised by [[JwtVerification]] when a token is missing the `typ` type.
+    */
+  final class MissingType() extends JwtException("the token header is missing the type (typ)")
+
+  /**
     * Exception raised by [[JwtVerification]] when there are no accepted
     * algorithms for a provided [[Jwk]] with the specified [[JwkKeyType]].
     */
@@ -312,6 +323,12 @@ object JwtException {
     */
   final class RejectedSubject(subject: String)
     extends JwtException(s"the token subject (sub) [$subject] was rejected")
+
+  /**
+    * Exception raised by [[JwtVerification]] when a token `typ` type is rejected.
+    */
+  final class RejectedType(`type`: String)
+    extends JwtException(s"the token type (typ) [${`type`}] was rejected")
 
   /**
     * Exception raised by [[JwtVerification]] when the token signature could

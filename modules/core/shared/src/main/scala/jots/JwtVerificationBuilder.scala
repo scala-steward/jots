@@ -131,6 +131,30 @@ sealed abstract class JwtVerificationBuilder[F[_], G[_]] {
     withAcceptedSubjects(AcceptedSubjects.fromList(subjects))
 
   /**
+    * Returns the accepted types (typ).
+    *
+    * Default: [[AcceptedTypes.any]], which means all types are accepted.
+    */
+  def acceptedTypes: AcceptedTypes
+
+  /**
+    * Sets the accepted types (typ).
+    */
+  def withAcceptedTypes(types: AcceptedTypes): JwtVerificationBuilder[F, G]
+
+  /**
+    * Sets the specified types as the only accepted types.
+    */
+  def withAcceptedTypes(`type`: String, types: String*): JwtVerificationBuilder[F, G] =
+    withAcceptedTypes(AcceptedTypes(`type`, types: _*))
+
+  /**
+    * Sets the specified types as the only accepted types.
+    */
+  def withAcceptedTypesList(types: NonEmptyList[String]): JwtVerificationBuilder[F, G] =
+    withAcceptedTypes(AcceptedTypes.fromList(types))
+
+  /**
     * Returns `true` if the expiration (exp) should be verified when present; `false` otherwise.
     *
     * Default: `true`.
@@ -538,6 +562,7 @@ private[jots] final case class JwtHmacVerificationBuilder[
   override val acceptedAudiences: AcceptedAudiences,
   override val acceptedIssuers: AcceptedIssuers,
   override val acceptedSubjects: AcceptedSubjects,
+  override val acceptedTypes: AcceptedTypes,
   override val checkExpiration: Boolean,
   override val checkIssuedAt: Boolean,
   override val checkKeyRequirements: Boolean,
@@ -564,6 +589,9 @@ private[jots] final case class JwtHmacVerificationBuilder[
 
   override def withAcceptedSubjects(subjects: AcceptedSubjects): JwtVerificationBuilder[F, G] =
     copy(acceptedSubjects = subjects)
+
+  override def withAcceptedTypes(types: AcceptedTypes): JwtVerificationBuilder[F, G] =
+    copy(acceptedTypes = types)
 
   override def withCheckExpiration(checkExpiration: Boolean): JwtVerificationBuilder[F, G] =
     copy(checkExpiration = checkExpiration)
@@ -608,6 +636,7 @@ private[jots] object JwtHmacVerificationBuilder {
       acceptedAudiences = AcceptedAudiences.none,
       acceptedIssuers = AcceptedIssuers.any,
       acceptedSubjects = AcceptedSubjects.any,
+      acceptedTypes = AcceptedTypes.any,
       checkExpiration = true,
       checkIssuedAt = false,
       checkKeyRequirements = true,
@@ -629,6 +658,7 @@ private[jots] final case class JwtAsymmetricVerificationBuilder[
   override val acceptedAudiences: AcceptedAudiences,
   override val acceptedIssuers: AcceptedIssuers,
   override val acceptedSubjects: AcceptedSubjects,
+  override val acceptedTypes: AcceptedTypes,
   override val checkExpiration: Boolean,
   override val checkIssuedAt: Boolean,
   override val checkKeyRequirements: Boolean,
@@ -649,6 +679,9 @@ private[jots] final case class JwtAsymmetricVerificationBuilder[
 
   override def withAcceptedSubjects(subjects: AcceptedSubjects): JwtVerificationBuilder[F, G] =
     copy(acceptedSubjects = subjects)
+
+  override def withAcceptedTypes(types: AcceptedTypes): JwtVerificationBuilder[F, G] =
+    copy(acceptedTypes = types)
 
   override def withCheckExpiration(checkExpiration: Boolean): JwtVerificationBuilder[F, G] =
     copy(checkExpiration = checkExpiration)
@@ -693,6 +726,7 @@ private[jots] object JwtAsymmetricVerificationBuilder {
       acceptedAudiences = AcceptedAudiences.none,
       acceptedIssuers = AcceptedIssuers.any,
       acceptedSubjects = AcceptedSubjects.any,
+      acceptedTypes = AcceptedTypes.any,
       checkExpiration = true,
       checkIssuedAt = false,
       checkKeyRequirements = true,
@@ -714,6 +748,7 @@ private[jots] final case class JwtJwkSetVerificationBuilder[
   override val acceptedAudiences: AcceptedAudiences,
   override val acceptedIssuers: AcceptedIssuers,
   override val acceptedSubjects: AcceptedSubjects,
+  override val acceptedTypes: AcceptedTypes,
   override val checkExpiration: Boolean,
   override val checkIssuedAt: Boolean,
   override val checkKeyRequirements: Boolean,
@@ -740,6 +775,7 @@ private[jots] final case class JwtJwkSetVerificationBuilder[
       .withAcceptedAudiences(acceptedAudiences)
       .withAcceptedIssuers(acceptedIssuers)
       .withAcceptedSubjects(acceptedSubjects)
+      .withAcceptedTypes(acceptedTypes)
       .withCheckExpiration(checkExpiration)
       .withCheckIssuedAt(checkIssuedAt)
       .withCheckKeyRequirements(checkKeyRequirements)
@@ -759,6 +795,9 @@ private[jots] final case class JwtJwkSetVerificationBuilder[
 
   override def withAcceptedSubjects(subjects: AcceptedSubjects): JwtVerificationBuilder[F, G] =
     copy(acceptedSubjects = subjects)
+
+  override def withAcceptedTypes(types: AcceptedTypes): JwtVerificationBuilder[F, G] =
+    copy(acceptedTypes = types)
 
   override def withCheckExpiration(checkExpiration: Boolean): JwtVerificationBuilder[F, G] =
     copy(checkExpiration = checkExpiration)
@@ -803,6 +842,7 @@ private[jots] object JwtJwkSetVerificationBuilder {
       acceptedAudiences = AcceptedAudiences.none,
       acceptedIssuers = AcceptedIssuers.any,
       acceptedSubjects = AcceptedSubjects.any,
+      acceptedTypes = AcceptedTypes.any,
       checkExpiration = true,
       checkIssuedAt = false,
       checkKeyRequirements = true,
