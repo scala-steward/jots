@@ -80,9 +80,7 @@ object SignedJwtClaims {
       toJsonObject.toJson
 
     override def toString: String =
-      toJsonObject.toIterable
-        .map { case (key, value) => show"$key -> $value" }
-        .mkString("SignedJwtClaims(", ",", ")")
+      toJsonObject.keys.mkString("SignedJwtClaims(", ",", ")")
 
     override def show: String =
       toBase64UrlNoPad

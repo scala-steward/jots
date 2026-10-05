@@ -19,7 +19,6 @@ package jots
 import cats.Hash
 import cats.Show
 import cats.data.NonEmptyList
-import cats.syntax.all.*
 import io.circe.Json
 import io.circe.JsonObject
 import io.circe.syntax.*
@@ -204,9 +203,7 @@ object JwtClaims {
       SignedJwtClaims.fromClaims(this)
 
     override def toString: String =
-      toJsonObject.toIterable
-        .map { case (key, value) => show"$key -> $value" }
-        .mkString("JwtClaims(", ",", ")")
+      toJsonObject.keys.mkString("JwtClaims(", ",", ")")
 
     override def show: String =
       toBase64UrlNoPad
