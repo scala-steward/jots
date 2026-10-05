@@ -19,6 +19,8 @@ package jots
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.syntax.all.*
+import io.circe.Json
+import io.circe.JsonNumber
 import io.circe.syntax.*
 import java.nio.charset.StandardCharsets.UTF_8
 import jots.crypto.PublicKey
@@ -212,6 +214,89 @@ object JwtVerificationSuite extends SimpleIOSuite {
         .build
       result <- signed.verifyWith(verification).attempt
       _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.TokenNotYetIssued) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsFractionalExpiration") {
+    for {
+      now <- IO.realTime
+      claims = JwtClaims("exp" -> (BigDecimal((now + 1.hour).toSeconds) + BigDecimal("0.123456789")).asJson)
+      signed <- sign(claims)
+      verification <- JwtVerification.default[IO].hmac(algorithm, secretKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectFractionalExpired") {
+    for {
+      now <- IO.realTime
+      claims = JwtClaims("exp" -> (BigDecimal((now - 1.hour).toSeconds) + BigDecimal("0.5")).asJson)
+      signed <- sign(claims)
+      verification <- JwtVerification.default[IO].hmac(algorithm, secretKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.TokenExpired) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectInvalidExpiration") {
+    for {
+      now <- IO.realTime
+      expirations = List(
+        (BigDecimal((now + 1.hour).toSeconds) + BigDecimal("0.1234567891")).asJson,
+        Json.fromJsonNumber(JsonNumber.fromDecimalStringUnsafe("1e-100000000")),
+        Json.fromJsonNumber(JsonNumber.fromDecimalStringUnsafe("1" + "0" * 1000)),
+        9223372037L.asJson,
+        "123".asJson
+      )
+      verification <- JwtVerification.default[IO].hmac(algorithm, secretKey)
+      _ <- expirations.traverse_ { expiration =>
+        for {
+          signed <- sign(JwtClaims("exp" -> expiration))
+          result <- signed.verifyWith(verification).attempt
+          _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidExpiration) => () }
+        } yield ()
+      }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsExpirationAtLimitWithClockSkew") {
+    for {
+      signed <- sign(JwtClaims("exp" -> 9223372036L.asJson))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withClockSkew(1.second)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsIssuedAtAtLimitWithClockSkew") {
+    for {
+      signed <- sign(JwtClaims("iat" -> -9223372036L.asJson))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withCheckIssuedAt(true)
+        .withClockSkew(1.second)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsNotBeforeAtLimitWithClockSkew") {
+    for {
+      signed <- sign(JwtClaims("nbf" -> -9223372036L.asJson))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withClockSkew(1.second)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
     } yield success
   }
 
