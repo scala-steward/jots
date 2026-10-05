@@ -19,6 +19,8 @@ package jots.crypto
 import cats.Hash
 import cats.syntax.all.*
 import jots.crypto.CryptoException.InvalidSecretKey
+import scodec.bits.Bases.Alphabets.Base64
+import scodec.bits.Bases.Alphabets.Base64Url
 import scodec.bits.ByteVector
 
 /**
@@ -52,6 +54,32 @@ object SecretKey {
     */
   def apply(secretKey: String): Either[CryptoException, SecretKey] =
     fromStringUtf8(secretKey)
+
+  /**
+    * Returns a new [[SecretKey]] from the specified Base64 `String`.
+    *
+    * Returns an exception if Base64 decoding fails, or if the
+    * secret key is empty. Padding is optional and whitespace
+    * is ignored.
+    */
+  def fromBase64(secretKey: String): Either[CryptoException, SecretKey] =
+    ByteVector.fromBase64(secretKey, Base64) match {
+      case Some(bytes) => fromByteVector(bytes)
+      case None => Left(new InvalidSecretKey("failed to decode secret key as Base64"))
+    }
+
+  /**
+    * Returns a new [[SecretKey]] from the specified Base64Url `String`.
+    *
+    * Returns an exception if Base64Url decoding fails, or if the
+    * secret key is empty. Padding is optional and whitespace is
+    * ignored.
+    */
+  def fromBase64Url(secretKey: String): Either[CryptoException, SecretKey] =
+    ByteVector.fromBase64(secretKey, Base64Url) match {
+      case Some(bytes) => fromByteVector(bytes)
+      case None => Left(new InvalidSecretKey("failed to decode secret key as Base64Url"))
+    }
 
   /**
     * Returns a new [[SecretKey]] from the specified bytes.
