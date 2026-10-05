@@ -207,6 +207,13 @@ object RefreshingJwtVerification {
   )(implicit F: Temporal[F]): Resource[F, RefreshingJwtVerification[F]] =
     RefreshingJwtVerificationBuilder.refreshWith(client, uri)(verification).build
 
+  /**
+    * Exception raised when the keys were not refreshed within the max
+    * key age, with the most recent refresh failure as the cause.
+    */
+  final class ExpiredKeySet(maxKeyAge: FiniteDuration, cause: Option[Throwable])
+    extends JwtException(s"the key set was not refreshed within the max key age of $maxKeyAge", cause)
+
   private[jots] def fromBuilder[F[_]](
     builder: RefreshingJwtVerificationBuilder[F]
   )(implicit F: Temporal[F]): Resource[F, RefreshingJwtVerification[F]] = {
@@ -274,7 +281,7 @@ object RefreshingJwtVerification {
           F.pure(Phase.Ready(state))
         case Left(error) =>
           ref.get.flatMap {
-            case ready @ Phase.Ready(_) => ready.next
+            case ready @ Phase.Ready(_) => ready.next(error)
             case _ => F.pure(Phase.Unavailable(error))
           }
       }
@@ -354,6 +361,18 @@ object RefreshingJwtVerification {
         new IllegalArgumentException(s"the key set uri must use https, was [${uri.renderString}]")
       )
 
+    def ensureMaxKeyAge(state: State[F]): F[State[F]] =
+      maxKeyAge match {
+        case maxKeyAge: FiniteDuration =>
+          F.monotonic.flatMap { now =>
+            F.raiseWhen(now - state.refreshedAt > maxKeyAge)(
+              new ExpiredKeySet(maxKeyAge, state.refreshFailure)
+            ).as(state)
+          }
+        case _ =>
+          F.pure(state)
+      }
+
     for {
       _ <- ensureHttps.toResource
       deferred <- Deferred[F, StateResult[F]].toResource
@@ -366,8 +385,8 @@ object RefreshingJwtVerification {
 
       private def state: F[State[F]] =
         ref.get.flatMap {
-          case Phase.Ready(state) => state.pure
-          case Phase.Stopped(result) => result.liftTo[F]
+          case Phase.Ready(state) => ensureMaxKeyAge(state)
+          case Phase.Stopped(result) => result.liftTo[F].flatMap(ensureMaxKeyAge)
           case Phase.Unavailable(error) => error.raiseError
           case Phase.Pending(deferred) => deferred.get.rethrow
         }
@@ -387,12 +406,23 @@ object RefreshingJwtVerification {
   private final case class State[F[_]](
     keys: JwkSet,
     verification: JwtVerification[F],
+    refreshedAt: FiniteDuration,
     refreshAttemptedAt: FiniteDuration,
+    refreshFailure: Option[Throwable],
     requestRefresh: Deferred[F, Unit],
     refresh: DeferredStateResult[F]
   ) {
-    def next(implicit F: Temporal[F]): F[State[F]] =
-      State.next(keys, verification)
+    def next(error: Throwable)(implicit F: Temporal[F]): F[State[F]] =
+      for {
+        refreshAttemptedAt <- F.monotonic
+        requested <- Deferred[F, Unit]
+        refreshed <- Deferred[F, StateResult[F]]
+      } yield copy(
+        refreshAttemptedAt = refreshAttemptedAt,
+        refreshFailure = Some(error),
+        requestRefresh = requested,
+        refresh = refreshed
+      )
   }
 
   private object State {
@@ -401,10 +431,10 @@ object RefreshingJwtVerification {
       verification: JwtVerification[F]
     )(implicit F: Temporal[F]): F[State[F]] =
       for {
-        refreshAttemptedAt <- F.monotonic
+        refreshedAt <- F.monotonic
         requested <- Deferred[F, Unit]
         refreshed <- Deferred[F, StateResult[F]]
-      } yield State(keys, verification, refreshAttemptedAt, requested, refreshed)
+      } yield State(keys, verification, refreshedAt, refreshedAt, None, requested, refreshed)
   }
 
   private type StateResult[F[_]] = Either[Throwable, State[F]]
@@ -419,8 +449,8 @@ object RefreshingJwtVerification {
     final case class Unavailable[F[_]](error: Throwable) extends Phase[F]
 
     final case class Ready[F[_]](state: State[F]) extends Phase[F] {
-      def next(implicit F: Temporal[F]): F[Phase[F]] =
-        state.next.map(Ready(_))
+      def next(error: Throwable)(implicit F: Temporal[F]): F[Phase[F]] =
+        state.next(error).map(Ready(_))
     }
 
     final case class Stopped[F[_]](result: StateResult[F]) extends Phase[F]
