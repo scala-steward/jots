@@ -19,6 +19,7 @@ package jots
 import cats.Show
 import cats.kernel.laws.discipline.HashTests
 import jots.testing.*
+import scodec.bits.Bases.Alphabets.Base64UrlNoPad
 import weaver.SimpleIOSuite
 import weaver.discipline.Discipline
 import weaver.scalacheck.Checkers
@@ -36,6 +37,23 @@ object JwtSignatureSuite extends SimpleIOSuite with Checkers with Discipline {
   test("JwtSignature.toString") {
     forall { (signature: JwtSignature) =>
       expect(signature.toString.contains(signature.toBase64UrlNoPad))
+    }
+  }
+
+  test("JwtSignature.fromBase64UrlNoPad") {
+    forall { (signature: JwtSignature) =>
+      expect.eql(Some(signature), JwtSignature.fromBase64UrlNoPad(signature.toBase64UrlNoPad).toOption)
+    }
+  }
+
+  test("JwtSignature.fromBase64UrlNoPad.rejectNonCanonical") {
+    forall { (signature: JwtSignature) =>
+      val encoded = signature.toBase64UrlNoPad
+      if (encoded.length % 4 == 0) success
+      else {
+        val nonCanonical = encoded.init :+ Base64UrlNoPad.toChar(Base64UrlNoPad.toIndex(encoded.last) | 1)
+        expect(JwtSignature.fromBase64UrlNoPad(nonCanonical).isLeft)
+      }
     }
   }
 }

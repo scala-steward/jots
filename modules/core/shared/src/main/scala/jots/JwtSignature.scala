@@ -112,8 +112,21 @@ object JwtSignature {
     */
   def fromBase64UrlNoPad(signature: String): Either[JwtException, JwtSignature] =
     ByteVector.fromBase64Descriptive(signature, Base64UrlNoPad) match {
+      case Right(_) if hasUnusedBitsSet(signature) =>
+        Left(new InvalidJwtSignature("the last Base64UrlNoPad character has unused bits set"))
       case Right(signature) => Right(JwtSignature.fromByteVector(signature))
       case Left(details) => Left(new InvalidJwtSignature(s"failed to decode as Base64UrlNoPad: $details"))
+    }
+
+  /*
+   * Unused bits must be unset, otherwise there are
+   * multiple encodings of the same signature.
+   */
+  private def hasUnusedBitsSet(signature: String): Boolean =
+    signature.length % 4 match {
+      case 2 => (Base64UrlNoPad.toIndex(signature.last) & 0x0f) != 0
+      case 3 => (Base64UrlNoPad.toIndex(signature.last) & 0x03) != 0
+      case _ => false
     }
 
   /**
