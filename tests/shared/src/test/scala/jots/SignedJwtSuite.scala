@@ -20,6 +20,7 @@ import cats.kernel.laws.discipline.HashTests
 import io.circe.syntax.*
 import java.nio.charset.StandardCharsets.UTF_8
 import jots.testing.*
+import scodec.bits.Bases.Alphabets.Base64UrlNoPad
 import scodec.bits.ByteVector
 import weaver.SimpleIOSuite
 import weaver.discipline.Discipline
@@ -40,6 +41,20 @@ object SignedJwtSuite extends SimpleIOSuite with Checkers with Discipline {
 
   pureTest("SignedJwt.toUnsigned") {
     forEach(ExampleJwt.All)(example => expect.eql(example.builder, example.signedJwt.toBuilder))
+  }
+
+  pureTest("SignedJwt.fromString.rejectNonCanonicalSignature") {
+    val examples = ExampleJwt.All.filter(_.signedJwt.signature.toBase64UrlNoPad.length % 4 != 0)
+    forEach(examples) { example =>
+      val nonCanonical =
+        example.show.init :+ Base64UrlNoPad.toChar(Base64UrlNoPad.toIndex(example.show.last) | 1)
+      SignedJwt.fromString(nonCanonical) match {
+        case Left(e: JwtException.InvalidSignedJwt) =>
+          expect(e.cause.exists(_.isInstanceOf[JwtException.InvalidJwtSignature]))
+        case _ =>
+          failure(s"the non-canonical signature was not rejected: $nonCanonical")
+      }
+    }
   }
 
   pureTest("SignedJwt.fromString.rejectNestedHeader") {
