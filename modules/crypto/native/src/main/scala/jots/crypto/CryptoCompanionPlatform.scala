@@ -32,26 +32,27 @@ private[crypto] trait CryptoCompanionPlatform {
   ): F[Mac] =
     delayWithClearedErrors {
       Zone.acquire { implicit zone =>
-        val name = nameOf(algorithm)
-        val evpMd = EVP_get_digestbyname(toCString(name))
-        if (evpMd == null) throw opensslError("EVP_get_digestbyname")
-
         val key = secretKey.toByteVector.toArrayUnsafe
         val data = message.toArrayUnsafe
         val md = new Array[Byte](EVP_MAX_MD_SIZE)
-        val mdLen = stackalloc[CUnsignedInt]()
+        val mdLen = stackalloc[CSize]()
 
-        val hmac = HMAC(
-          evpMd,
+        val hmac = EVP_Q_mac(
+          null,
+          c"HMAC",
+          null,
+          toCString(nameOf(algorithm)),
+          null,
           if (key.isEmpty) null else key.atUnsafe(0),
-          key.length,
+          key.length.toCSize,
           if (data.isEmpty) null else data.atUnsafe(0),
           data.length.toCSize,
           md.atUnsafe(0),
+          md.length.toCSize,
           mdLen
         )
 
-        if (hmac == null) throw opensslError("HMAC")
+        if (hmac == null) throw opensslError("EVP_Q_mac")
         Mac(ByteVector(md, 0, (!mdLen).toInt))
       }
     }
@@ -574,6 +575,8 @@ private object openssl {
   type EVP_MD_CTX
   type EVP_PKEY
   type EVP_PKEY_CTX
+  type OSSL_LIB_CTX
+  type OSSL_PARAM
 
   def d2i_AutoPrivateKey(
     a: Ptr[Ptr[EVP_PKEY]],
@@ -668,14 +671,19 @@ private object openssl {
 
   def EVP_MD_CTX_free(ctx: Ptr[EVP_MD_CTX]): Unit = extern
 
-  def HMAC(
-    evpMd: Ptr[EVP_MD],
+  def EVP_Q_mac(
+    libctx: Ptr[OSSL_LIB_CTX],
+    name: CString,
+    propq: CString,
+    subalg: CString,
+    params: Ptr[OSSL_PARAM],
     key: CVoidPtr,
-    keyLen: CInt,
+    keylen: CSize,
     data: CVoidPtr,
-    dataLen: CSize,
-    md: Ptr[Byte],
-    mdLen: Ptr[CUnsignedInt]
+    datalen: CSize,
+    out: Ptr[Byte],
+    outsize: CSize,
+    outlen: Ptr[CSize]
   ): Ptr[Byte] = extern
 
   def d2i_ECDSA_SIG(
