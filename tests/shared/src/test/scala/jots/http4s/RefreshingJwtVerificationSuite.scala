@@ -533,6 +533,7 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
       entered <- Deferred[IO, Unit]
       proceed <- Deferred[IO, Unit]
       result <- refreshedKeysBuilder(testClient.client, entered, proceed)
+        .withRefreshInterval(1.hour)
         .withRefreshIntervalOnError(1.hour)
         .withMinRefreshIntervalOnMissingKey(minRefreshIntervalOnMissingKey)
         .build
@@ -540,7 +541,9 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
           for {
             fiber <- verification.verify(signed).attempt.start
             _ <- entered.get
-            _ <- eventually(testClient.requests)(_.size >= 2)
+            _ <- IO.sleep(minRefreshIntervalOnMissingKey * 10)
+            failed <- verification.verify(signed).attempt
+            _ <- matchOrFailFast[IO](failed) { case Left(_: JwtException.MissingKey) => () }
             _ <- IO.sleep(minRefreshIntervalOnMissingKey * 10)
             _ <- proceed.complete(())
             verified <- fiber.joinWithNever
@@ -654,7 +657,7 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
         JwtVerification.default[IO].jwkSetAll(keys).map { verification =>
           if (keys === keySet)
             JwtVerification.verifyWith[IO] { jwt =>
-              entered.complete(()) >> proceed.get >> verification.verify(jwt)
+              entered.complete(()).ifM(proceed.get, IO.unit) >> verification.verify(jwt)
             }
           else verification
         }
