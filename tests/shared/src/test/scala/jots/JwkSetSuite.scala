@@ -22,6 +22,7 @@ import cats.syntax.all.*
 import io.circe.Json
 import io.circe.syntax.*
 import jots.testing.*
+import org.scalacheck.Gen
 import weaver.SimpleIOSuite
 import weaver.discipline.Discipline
 import weaver.scalacheck.Checkers
@@ -40,6 +41,19 @@ object JwkSetSuite extends SimpleIOSuite with Checkers with Discipline {
   test("JwkSet.toJson") {
     forall { (set: JwkSet) =>
       expect.eql(Right(set), set.toJson.as[JwkSet])
+    }
+  }
+
+  test("JwkSet.toPublicJwkSet") {
+    forall(Gen.listOf(Gen.oneOf(jwkEcdsaKeyPairGen, jwkEddsaKeyPairGen, jwkRsaKeyPairGen))) { keyPairs =>
+      val (privateKeys, publicKeys) = keyPairs.unzip
+      expect.eql(Some(JwkSet.fromList(publicKeys)), JwkSet.fromList(privateKeys).toPublicJwkSet.toOption)
+    }
+  }
+
+  test("JwkSet.toPublicJwkSet.rejectSecretKey") {
+    forall(jwkOctGen) { jwk =>
+      expect(JwkSet(jwk).toPublicJwkSet.isLeft)
     }
   }
 
