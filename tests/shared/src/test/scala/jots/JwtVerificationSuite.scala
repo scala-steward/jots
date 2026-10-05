@@ -382,6 +382,100 @@ object JwtVerificationSuite extends SimpleIOSuite {
     } yield success
   }
 
+  test("JwtVerification.rejectMissingType") {
+    for {
+      signed <- sign(JwtClaims.empty, JwtHeader.default.withoutType)
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withAcceptedTypes("JWT")
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.MissingType) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectUnacceptedType") {
+    for {
+      signed <- sign(JwtClaims.empty, JwtHeader.default.withType("JWT"))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withAcceptedTypes("at+jwt")
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.RejectedType) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectInvalidType") {
+    for {
+      signed <- sign(JwtClaims.empty, JwtHeader.default.add("typ", 1.asJson))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withAcceptedTypes("JWT")
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidType) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsEquivalentTypes") {
+    val types = List("JWT", "jwt", "application/jwt", "Application/JWT")
+    (types, types).tupled
+      .traverse { case (accepted, typ) =>
+        for {
+          signed <- sign(JwtClaims.empty, JwtHeader.default.withType(typ))
+          verification <- JwtVerificationBuilder
+            .default[IO]
+            .hmac(algorithm, secretKey)
+            .withAcceptedTypes(accepted)
+            .build
+          result <- signed.verifyWith(verification).attempt
+          _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+        } yield success
+      }
+      .map(_.combineAll)
+  }
+
+  test("JwtVerification.acceptsMissingType") {
+    for {
+      signed <- sign(JwtClaims.empty, JwtHeader.default.withoutType)
+      verification <- JwtVerification.default[IO].hmac(algorithm, secretKey)
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.acceptsAnyType") {
+    for {
+      signed <- sign(JwtClaims.empty, JwtHeader.default.withType("other-type"))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(algorithm, secretKey)
+        .withAcceptedTypes("JWT")
+        .withAcceptedTypes(AcceptedTypes.any)
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
+  test("JwtVerification.jwkSet.rejectUnacceptedType") {
+    val keySet = JwkSet(octJwk("key-1"))
+    for {
+      signed <- sign(JwtClaims.empty, JwtHeader.default.withKeyId(JwkKeyId("key-1")))
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .jwkSetAll(keySet)
+        .withAcceptedTypes("at+jwt")
+        .build
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.RejectedType) => () }
+    } yield success
+  }
+
   test("JwtVerification.jwkSet.verifiesByKeyId") {
     val keySet = JwkSet(octJwk("key-1"))
     for {
