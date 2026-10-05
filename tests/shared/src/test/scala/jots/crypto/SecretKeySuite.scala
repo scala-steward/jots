@@ -45,6 +45,42 @@ object SecretKeySuite extends SimpleIOSuite with Checkers with Discipline with S
     }
   }
 
+  test("SecretKey.fromBase64") {
+    forall { (secretKey: SecretKey) =>
+      expect.eql(Some(secretKey), SecretKey.fromBase64(secretKey.toByteVector.toBase64).toOption)
+    }
+  }
+
+  test("SecretKey.fromBase64Url") {
+    forall { (secretKey: SecretKey) =>
+      expect.eql(Some(secretKey), SecretKey.fromBase64Url(secretKey.toByteVector.toBase64Url).toOption) &&
+      expect.eql(Some(secretKey), SecretKey.fromBase64Url(secretKey.toByteVector.toBase64UrlNoPad).toOption)
+    }
+  }
+
+  pureTest("SecretKey.rejectInvalidEncodings") {
+    val results = List(
+      SecretKey.fromBase64(""),
+      SecretKey.fromBase64("c2VjcmV0!"),
+      SecretKey.fromBase64Url(""),
+      SecretKey.fromBase64Url("c2VjcmV0+")
+    )
+
+    forEach(results)(result => expect(result.isLeft))
+  }
+
+  pureTest("SecretKey.decodingErrorsExcludeSecretKey") {
+    val results = List(
+      SecretKey.fromBase64("secret!"),
+      SecretKey.fromBase64Url("secret!")
+    )
+
+    forEach(results) {
+      case Left(e) => expect(!e.getMessage.contains("!"))
+      case Right(_) => failure("the secret key was not rejected")
+    }
+  }
+
   test("SecretKey.fromStringUtf8") {
     forall { (s: String) =>
       expect.eql(
