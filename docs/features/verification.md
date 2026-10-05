@@ -173,7 +173,7 @@ The default `JwtVerification` instances perform the following verifications.
 
 #### Customizing Default Verifications
 
-Except for the signature verification, the above checks can be adjusted using `JwtVerificationBuilder`. There is also additional checks which can be enabled, like requiring certain claims to be present, and further tweaks, like accounting for clock skew. The following example requires `exp`, `iat`, and `nbf` to be present, and allows a 30 second clock skew. It also specifies the accepted audiences and issuers.
+Except for the signature verification, the above checks can be adjusted using `JwtVerificationBuilder`. There is also additional checks which can be enabled, like requiring certain claims to be present, and further tweaks, like accounting for clock skew, which is zero by default. The following example requires `exp`, `iat`, and `nbf` to be present, and allows a 30 second clock skew. It also specifies the accepted audiences and issuers.
 
 ```scala mdoc:silent
 import scala.concurrent.duration.*

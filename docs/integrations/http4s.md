@@ -73,6 +73,8 @@ val routes: IO[HttpRoutes[IO]] =
 We should take care to _not_ put secrets, like `SecretKey`, in source code.
 @:@
 
+Note the middleware protects every incoming request, so public routes should be combined before the authenticated routes. This normally looks something along the lines of: `publicRoutes <+> authMiddleware(authedRoutes)`. In case it is not done correctly, public routes will always get a `401 Unauthorized` without a token present.
+
 ## Refreshing Verification
 
 There is `RefreshingJwtVerification` with support for periodically fetching a `JwkSet` from an HTTP endpoint and refreshing verification. The following example shows how to create a `RefreshingJwtVerification` instance, which accepts tokens issued by `https://example.auth0.com/` for the `https://api.example.com` audience. Note the example allows all supported asymmetric algorithms and uses the [default refresh settings](#default-refresh-settings).
