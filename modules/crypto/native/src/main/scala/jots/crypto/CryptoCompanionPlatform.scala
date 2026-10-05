@@ -30,7 +30,7 @@ private[crypto] trait CryptoCompanionPlatform {
     secretKey: SecretKey,
     message: ByteVector
   ): F[Mac] =
-    Sync[F].delay {
+    delayWithClearedErrors {
       Zone.acquire { implicit zone =>
         val name = nameOf(algorithm)
         val evpMd = EVP_get_digestbyname(toCString(name))
@@ -89,7 +89,7 @@ private[crypto] trait CryptoCompanionPlatform {
     privateKey: PrivateKey,
     message: ByteVector
   ): F[Signature] =
-    Sync[F].delay {
+    delayWithClearedErrors {
       Zone.acquire { implicit zone =>
         val evpMd = EVP_get_digestbyname(toCString(nameOf(algorithm.hashAlgorithm)))
         if (evpMd == null) throw opensslError("EVP_get_digestbyname")
@@ -130,7 +130,7 @@ private[crypto] trait CryptoCompanionPlatform {
     privateKey: PrivateKey,
     message: ByteVector
   ): F[Signature] =
-    Sync[F].delay {
+    delayWithClearedErrors {
       val pkey = loadPrivateKey(privateKey)
       try {
         val id = EVP_PKEY_get_base_id(pkey)
@@ -167,7 +167,7 @@ private[crypto] trait CryptoCompanionPlatform {
     message: ByteVector,
     pss: Option[Int]
   ): F[Signature] =
-    Sync[F].delay {
+    delayWithClearedErrors {
       Zone.acquire { implicit zone =>
         val name = nameOf(hashAlgorithm)
         val evpMd = EVP_get_digestbyname(toCString(name))
@@ -246,7 +246,7 @@ private[crypto] trait CryptoCompanionPlatform {
     message: ByteVector,
     signature: Signature
   ): F[Verified] =
-    Sync[F].delay {
+    delayWithClearedErrors {
       Zone.acquire { implicit zone =>
         val evpMd = EVP_get_digestbyname(toCString(nameOf(algorithm.hashAlgorithm)))
         if (evpMd == null) throw opensslError("EVP_get_digestbyname")
@@ -290,7 +290,7 @@ private[crypto] trait CryptoCompanionPlatform {
     message: ByteVector,
     signature: Signature
   ): F[Verified] =
-    Sync[F].delay {
+    delayWithClearedErrors {
       val pkey = loadPublicKey(publicKey)
       try {
         val id = EVP_PKEY_get_base_id(pkey)
@@ -325,7 +325,7 @@ private[crypto] trait CryptoCompanionPlatform {
     signature: Signature,
     pss: Option[Int]
   ): F[Verified] =
-    Sync[F].delay {
+    delayWithClearedErrors {
       Zone.acquire { implicit zone =>
         val name = nameOf(hashAlgorithm)
         val evpMd = EVP_get_digestbyname(toCString(name))
@@ -527,6 +527,13 @@ private[crypto] trait CryptoCompanionPlatform {
       case HashAlgorithms.SHA3_512 => "SHA3-512"
     }
 
+  private[this] def delayWithClearedErrors[F[_]: Sync, A](thunk: => A): F[A] =
+    Sync[F].delay {
+      ERR_clear_error()
+      try thunk
+      finally ERR_clear_error()
+    }
+
   private[this] def opensslError(functionName: String): Throwable = {
     val code = ERR_get_error()
     val reasonPtr = ERR_reason_error_string(code)
@@ -648,6 +655,8 @@ private object openssl {
   def EVP_PKEY_free(key: Ptr[EVP_PKEY]): Unit = extern
 
   def EVP_PKEY_get_base_id(key: Ptr[EVP_PKEY]): Int = extern
+
+  def ERR_clear_error(): Unit = extern
 
   def ERR_get_error(): ULong = extern
 
