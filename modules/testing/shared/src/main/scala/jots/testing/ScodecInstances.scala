@@ -40,7 +40,7 @@ private[jots] trait ScodecInstances {
     Cogen[Array[Byte]].contramap(_.toArrayUnsafe)
 
   lazy val byteVectorNonEmptyGen: Gen[ByteVector] =
-    byteVectorGen.filter(_.nonEmpty)
+    Gen.nonEmptyContainerOf[Array, Byte](arbitrary[Byte]).map(ByteVector.view)
 
   lazy val byteVectorFunGen: Gen[ByteVector => ByteVector] =
     Gen.function1(byteVectorGen)
