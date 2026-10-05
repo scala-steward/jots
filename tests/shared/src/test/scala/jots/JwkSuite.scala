@@ -21,6 +21,7 @@ import cats.kernel.laws.discipline.HashTests
 import io.circe.Json
 import io.circe.syntax.*
 import jots.testing.*
+import org.scalacheck.Gen
 import weaver.SimpleIOSuite
 import weaver.discipline.Discipline
 import weaver.scalacheck.Checkers
@@ -39,6 +40,33 @@ object JwkSuite extends SimpleIOSuite with Checkers with Discipline {
     forall { (jwk: Jwk) =>
       expect.eql(Right(jwk), jwk.toJson.as[Jwk])
     }
+  }
+
+  test("Jwk.toPublicJwk") {
+    forall(Gen.oneOf(jwkEcdsaKeyPairGen, jwkEddsaKeyPairGen, jwkRsaKeyPairGen)) {
+      case (privateKey, publicKey) =>
+        expect.eql(Some(publicKey), privateKey.toPublicJwk.toOption) &&
+        expect.eql(Some(publicKey), publicKey.toPublicJwk.toOption)
+    }
+  }
+
+  test("Jwk.toPublicJwk.removesOtherPrimes") {
+    forall(jwkRsaKeyPairGen) { case (privateKey, publicKey) =>
+      val otherPrimes = Json.arr(Json.obj("r" -> "AQAB".asJson, "d" -> "AQAB".asJson, "t" -> "AQAB".asJson))
+      val otherPrimesKey = Jwk.fromJsonObject(privateKey.toJsonObject.add("oth", otherPrimes))
+      expect.eql(Some(publicKey), otherPrimesKey.flatMap(_.toPublicJwk).toOption)
+    }
+  }
+
+  test("Jwk.toPublicJwk.rejectSecretKey") {
+    forall(jwkOctGen) { jwk =>
+      expect(jwk.toPublicJwk.isLeft)
+    }
+  }
+
+  pureTest("Jwk.toPublicJwk.rejectUnknownKeyType") {
+    val jwk = Jwk("kty" -> "AKP".asJson, "priv" -> "AQAB".asJson).fold(throw _, identity)
+    expect(jwk.toPublicJwk.isLeft)
   }
 
   pureTest("Jwk.fromString.rejectNested") {

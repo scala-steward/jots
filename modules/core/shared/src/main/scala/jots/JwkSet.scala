@@ -61,6 +61,12 @@ sealed abstract class JwkSet {
   def toList: List[Jwk]
 
   /**
+    * Returns the key set without any private key parameters, or a
+    * [[JwtException]] if the key set contains a non-asymmetric key.
+    */
+  def toPublicJwkSet: Either[JwtException, JwkSet]
+
+  /**
     * Returns a `String` representation of the key set.
     */
   def show: String
@@ -81,6 +87,9 @@ object JwkSet {
 
     override def toJson: Json =
       toJsonObject.toJson
+
+    override def toPublicJwkSet: Either[JwtException, JwkSet] =
+      toList.traverse(_.toPublicJwk).map(fromList)
 
     override def show: String =
       toList.map(_.show).mkString("JwkSet(", ",", ")")

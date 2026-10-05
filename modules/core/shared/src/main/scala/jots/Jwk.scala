@@ -75,6 +75,12 @@ sealed abstract class Jwk {
   def toPrivateKey: Either[JwtException, PrivateKey]
 
   /**
+    * Returns the key without any private key parameters, or
+    * a [[JwtException]] if the key is not an asymmetric key.
+    */
+  def toPublicJwk: Either[JwtException, Jwk]
+
+  /**
     * Returns the key as a [[jots.crypto.PublicKey]]
     * or a [[JwtException]] if it was not possible.
     */
@@ -118,6 +124,17 @@ object Jwk {
         case keyType =>
           Left(new InvalidPrivateKey(s"unsupported key type [${keyType.name}]"))
       }
+
+    override def toPublicJwk: Either[InvalidPublicKey, Jwk] =
+      keyType match {
+        case JwkKeyTypes.EC => Right(remove("d"))
+        case JwkKeyTypes.OKP => Right(remove("d"))
+        case JwkKeyTypes.RSA => Right(remove("d", "p", "q", "dp", "dq", "qi", "oth"))
+        case _ => Left(new InvalidPublicKey(s"unsupported key type [${keyType.name}]"))
+      }
+
+    private def remove(keys: String*): Jwk =
+      copy(toJsonObject = toJsonObject.filterKeys(key => !keys.contains(key)))
 
     override def toPublicKey: Either[InvalidPublicKey, PublicKey] =
       keyType match {
