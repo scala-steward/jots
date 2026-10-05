@@ -56,9 +56,7 @@ private[jots] trait SecretKeyInstances {
 
   lazy val secretKeyGen: Gen[SecretKey] =
     for {
-      bytes <- arbitrary[Array[Byte]]
-      if bytes.nonEmpty
-      byteVector = ByteVector.view(bytes)
+      byteVector <- byteVectorNonEmptyGen
       secretKey <- SecretKey.fromByteVector(byteVector).map(Gen.const).getOrElse(Gen.fail)
     } yield secretKey
 
