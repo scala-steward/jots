@@ -40,6 +40,12 @@ object SignedJwtClaimsSuite extends SimpleIOSuite with Checkers with Discipline 
     }
   }
 
+  test("SignedJwtClaims.toString") {
+    forall { (claims: SignedJwtClaims) =>
+      expect.eql(claims.toJsonObject.keys.mkString("SignedJwtClaims(", ",", ")"), claims.toString)
+    }
+  }
+
   // {"sub": "1234567890","sub": "1234567890"} as Base64UrlNoPad
   private val claimsWithDuplicateKeys: String =
     "eyJzdWIiOiAiMTIzNDU2Nzg5MCIsInN1YiI6ICIxMjM0NTY3ODkwIn0"

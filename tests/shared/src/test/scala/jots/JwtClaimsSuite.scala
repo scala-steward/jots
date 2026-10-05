@@ -19,7 +19,6 @@ package jots
 import cats.Show
 import cats.data.NonEmptyList
 import cats.kernel.laws.discipline.HashTests
-import cats.syntax.all.*
 import io.circe.JsonObject
 import io.circe.syntax.*
 import jots.testing.*
@@ -44,10 +43,7 @@ object JwtClaimsSuite extends SimpleIOSuite with Checkers with Discipline {
 
   test("JwtClaims.toString") {
     forall { (claims: JwtClaims) =>
-      claims.toJsonObject.toList.map { case (key, value) =>
-        expect(claims.toString.contains(key)) &&
-        expect(claims.toString.contains(value.show))
-      }.combineAll
+      expect.eql(claims.toJsonObject.keys.mkString("JwtClaims(", ",", ")"), claims.toString)
     }
   }
 
