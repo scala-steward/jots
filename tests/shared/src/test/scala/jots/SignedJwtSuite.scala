@@ -57,6 +57,41 @@ object SignedJwtSuite extends SimpleIOSuite with Checkers with Discipline {
     }
   }
 
+  pureTest("SignedJwt.fromString.rejectMalformed") {
+    val header = base64UrlNoPad("""{"alg":"HS256"}""")
+    val claims = base64UrlNoPad("""{"sub":"alice"}""")
+    val signature = "c2lnbmF0dXJl"
+    val tokens = List(
+      "",
+      s"$header.$claims",
+      s"$header.$claims.$signature.$signature",
+      s".$claims.$signature",
+      s"$header..$signature",
+      s"$header.$claims.$signature+",
+      s"$header.$claims.$signature/",
+      s"$header.$claims.$signature=",
+      s"$header.$claims.${signature}é",
+      s" $header.$claims.$signature",
+      s"$header.$claims.$signature\n",
+      s"$header.${claims.take(4)} ${claims.drop(4)}.$signature"
+    )
+
+    forEach(tokens) { token =>
+      SignedJwt.fromString(token) match {
+        case Left(e: JwtException.InvalidSignedJwt) =>
+          expect.eql("the token is invalid: token does not match expected pattern", e.message)
+        case _ =>
+          failure(s"the malformed token was not rejected: $token")
+      }
+    }
+  }
+
+  pureTest("SignedJwt.fromString.acceptsEmptySignature") {
+    val header = base64UrlNoPad("""{"alg":"HS256"}""")
+    val claims = base64UrlNoPad("""{"sub":"alice"}""")
+    expect(SignedJwt.fromString(s"$header.$claims.").exists(_.signature.toByteVector.isEmpty))
+  }
+
   pureTest("SignedJwt.fromString.rejectNestedHeader") {
     val header = base64UrlNoPad(s"""{"alg":"HS256","nested":${"[" * 1000}${"]" * 1000}}""")
     val claims = base64UrlNoPad("""{"sub":"alice"}""")
