@@ -21,7 +21,6 @@ import cats.syntax.all.*
 import io.circe.Decoder
 import io.circe.Encoder
 import java.nio.charset.StandardCharsets.UTF_8
-import java.util.regex.Pattern
 import jots.JwtException.InvalidSignedJwt
 import scodec.bits.ByteVector
 
@@ -116,13 +115,20 @@ object SignedJwt {
     * token in its `String` representation.
     */
   def fromString(signedJwt: String): Either[JwtException, SignedJwt] = {
-    val matcher = signedJwtPattern.matcher(signedJwt)
-    if (matcher.matches()) {
+    val headerEnd = signedJwt.indexOf('.')
+    val claimsEnd = signedJwt.indexOf('.', headerEnd + 1)
+
+    val wellFormed =
+      headerEnd > 0 && claimsEnd > headerEnd + 1 && signedJwt.indices.forall { index =>
+        index == headerEnd || index == claimsEnd || isBase64Url(signedJwt.charAt(index))
+      }
+
+    if (wellFormed) {
       val parsed =
         for {
-          header <- SignedJwtHeader.fromString(matcher.group(1))
-          claims <- SignedJwtClaims.fromString(matcher.group(2))
-          signature <- JwtSignature.fromString(matcher.group(3))
+          header <- SignedJwtHeader.fromString(signedJwt.substring(0, headerEnd))
+          claims <- SignedJwtClaims.fromString(signedJwt.substring(headerEnd + 1, claimsEnd))
+          signature <- JwtSignature.fromString(signedJwt.substring(claimsEnd + 1))
         } yield SignedJwt(header, claims, signature)
 
       parsed.leftMap(cause => new InvalidSignedJwt(cause = Some(cause)))
@@ -135,8 +141,8 @@ object SignedJwt {
   def parse(signedJwt: String): Either[JwtException, SignedJwt] =
     fromString(signedJwt)
 
-  private val signedJwtPattern: Pattern =
-    Pattern.compile(raw"\A([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]*)\z")
+  private def isBase64Url(c: Char): Boolean =
+    ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '-' || c == '_'
 
   implicit val signedJwtDecoder: Decoder[SignedJwt] =
     Decoder[String].emap(fromString(_).leftMap(_.message))
