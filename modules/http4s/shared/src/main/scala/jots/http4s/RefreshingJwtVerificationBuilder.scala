@@ -107,6 +107,26 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
   ): RefreshingJwtVerificationBuilder[F]
 
   /**
+    * Returns the maximum duration since the last successful refresh
+    * during which the keys are used. Once the keys are older, they
+    * are not used, and verification fails until keys are refreshed.
+    *
+    * The default max key age is unlimited (`Duration.Inf`).
+    */
+  def maxKeyAge: Duration
+
+  /**
+    * Sets the maximum duration since the last successful refresh
+    * during which the keys are used. Once the keys are older, they
+    * are not used, and verification fails until keys are refreshed.
+    *
+    * Note the max key age should be longer than the refresh interval.
+    *
+    * The default max key age is unlimited (`Duration.Inf`).
+    */
+  def withMaxKeyAge(maxKeyAge: Duration): RefreshingJwtVerificationBuilder[F]
+
+  /**
     * Returns the retry policy used when refreshing keys.
     *
     * The default retry policy is a jittered exponential
@@ -169,6 +189,7 @@ object RefreshingJwtVerificationBuilder {
     override val refreshInterval: FiniteDuration,
     override val refreshIntervalOnError: FiniteDuration,
     override val minRefreshIntervalOnMissingKey: FiniteDuration,
+    override val maxKeyAge: Duration,
     override val retryPolicy: RetryPolicy[F],
     override val requireHttps: Boolean,
     override val uri: Uri,
@@ -206,6 +227,15 @@ object RefreshingJwtVerificationBuilder {
       )
 
       copy(minRefreshIntervalOnMissingKey = minRefreshIntervalOnMissingKey)
+    }
+
+    override def withMaxKeyAge(maxKeyAge: Duration): RefreshingJwtVerificationBuilder[F] = {
+      require(
+        maxKeyAge > Duration.Zero,
+        s"max key age must be positive, was $maxKeyAge"
+      )
+
+      copy(maxKeyAge = maxKeyAge)
     }
 
     override def withRetryPolicy(retryPolicy: RetryPolicy[F]): RefreshingJwtVerificationBuilder[F] =
@@ -313,6 +343,7 @@ object RefreshingJwtVerificationBuilder {
       refreshInterval = 60.minutes,
       refreshIntervalOnError = 60.seconds,
       minRefreshIntervalOnMissingKey = 60.seconds,
+      maxKeyAge = Duration.Inf,
       retryPolicy = RetryPolicy(RetryPolicy.exponentialBackoff(maxWait = 5.seconds, maxRetry = 4)),
       requireHttps = true,
       uri = uri,

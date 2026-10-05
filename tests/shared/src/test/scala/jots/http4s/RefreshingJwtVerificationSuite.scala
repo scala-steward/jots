@@ -576,6 +576,70 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield success
   }
 
+  test("RefreshingJwtVerification.rejectExpiredKeys") {
+    for {
+      signed <- sign("key-1")
+      testClient <- TestClient(keysResponse(keySet), errorResponse)
+      result <- builder(testClient.client)
+        .withMaxKeyAge(maxKeyAge)
+        .build
+        .use { verification =>
+          for {
+            _ <- eventually(testClient.requests)(_.size >= 2)
+            _ <- IO.sleep(maxKeyAge * 2)
+            verified <- verification.verify(signed).attempt
+            keys <- verification.keys.attempt
+          } yield (verified, keys)
+        }
+        .timeout(30.seconds)
+      (verified, keys) = result
+      _ <- matchOrFailFast[IO](verified) {
+        case Left(e: RefreshingJwtVerification.ExpiredKeySet) if e.getCause.isInstanceOf[UnexpectedStatus] =>
+          ()
+      }
+      _ <- matchOrFailFast[IO](keys) { case Left(_: RefreshingJwtVerification.ExpiredKeySet) => () }
+    } yield success
+  }
+
+  test("RefreshingJwtVerification.rejectExpiredKeysAfterRelease") {
+    for {
+      signed <- sign("key-1")
+      testClient <- TestClient(keysResponse(keySet))
+      verification <- missingKeyBuilder(testClient.client)
+        .withMaxKeyAge(maxKeyAge)
+        .build
+        .use(verification => verification.keys.as(verification))
+      _ <- IO.sleep(maxKeyAge * 2)
+      result <- verification.verify(signed).attempt
+      _ <- matchOrFailFast[IO](result) {
+        case Left(e: RefreshingJwtVerification.ExpiredKeySet) if e.getCause == null => ()
+      }
+    } yield success
+  }
+
+  test("RefreshingJwtVerification.acceptsRefreshedKeysAfterExpiry") {
+    for {
+      signed <- sign("key-1")
+      gate <- Deferred[IO, Unit]
+      testClient <- TestClient(keysResponse(keySet), errorResponse, gate.get >> keysResponse(keySet))
+      result <- builder(testClient.client)
+        .withMaxKeyAge(maxKeyAge)
+        .build
+        .use { verification =>
+          for {
+            _ <- eventually(testClient.requests)(_.size >= 3)
+            _ <- IO.sleep(maxKeyAge * 2)
+            expired <- verification.verify(signed).attempt
+            _ <- matchOrFailFast[IO](expired) { case Left(_: RefreshingJwtVerification.ExpiredKeySet) => () }
+            _ <- gate.complete(())
+            verified <- eventually(verification.verify(signed).attempt)(_.isRight)
+          } yield verified
+        }
+        .timeout(30.seconds)
+      _ <- matchOrFailFast[IO](result) { case Right(_) => () }
+    } yield success
+  }
+
   test("RefreshingJwtVerification.releaseBeforeRefresh") {
     List
       .fill(50)(())
@@ -606,6 +670,9 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
 
   private val minRefreshIntervalOnMissingKey: FiniteDuration =
     1.milli
+
+  private val maxKeyAge: FiniteDuration =
+    50.millis
 
   private val noRetries: RetryPolicy[IO] =
     RetryPolicy[IO](_ => None)
