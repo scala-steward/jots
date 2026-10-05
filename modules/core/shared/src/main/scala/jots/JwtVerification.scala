@@ -22,7 +22,7 @@ import cats.data.NonEmptyList
 import cats.effect.kernel.Clock
 import cats.syntax.all.*
 import io.circe.Decoder
-import java.util.concurrent.TimeUnit
+import io.circe.JsonNumber
 import jots.JwtException.*
 import jots.crypto.Crypto
 import jots.crypto.PublicKey
@@ -34,7 +34,6 @@ import jots.internal.KeyRequirement
 import jots.internal.SkippedKeys
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
-import scala.util.Try
 
 /**
   * Capability to verify [[SignedJwt]]s and return [[VerifiedJwt]]s.
@@ -661,8 +660,28 @@ object JwtVerification {
       }
   }
 
+  private val maxNumericDate: BigDecimal =
+    BigDecimal(Long.MaxValue, 9)
+
+  /*
+   * Decode seconds with at most 9 decimals, so values are
+   * exact to the nanosecond, and fit in a FiniteDuration.
+   * Long numbers are rejected before parsing, since the
+   * parsing time grows quadratically with digit count.
+   */
   private implicit val finiteDurationDecoder: Decoder[FiniteDuration] =
-    Decoder[Long].emapTry(epochSecond => Try(Duration(epochSecond, TimeUnit.SECONDS)))
+    Decoder[JsonNumber].emap { numericDate =>
+      val seconds =
+        if (numericDate.toString.length > 32) None
+        else numericDate.toBigDecimal
+
+      seconds match {
+        case Some(seconds) if seconds.scale <= 9 && seconds.abs <= maxNumericDate =>
+          Right(Duration.fromNanos((seconds * 1000000000).toLongExact))
+        case _ =>
+          Left("invalid NumericDate")
+      }
+    }
 
   private def verifyHeader[F[_], G[_]: ApplicativeThrow](
     builder: JwtVerificationBuilder[F, G],
@@ -842,8 +861,7 @@ object JwtVerification {
         F.whenA(checkExpiration) {
           expiresAt.as[FiniteDuration] match {
             case Right(expiresAt) =>
-              val expiresAtSkewed = expiresAt.plus(clockSkew)
-              F.raiseWhen(currentTime >= expiresAtSkewed)(new TokenExpired(expiresAt))
+              F.raiseWhen(currentTime - clockSkew >= expiresAt)(new TokenExpired(expiresAt))
             case Left(_) =>
               F.raiseError(new InvalidExpiration(expiresAt))
           }
@@ -864,8 +882,7 @@ object JwtVerification {
         F.whenA(checkIssuedAt) {
           issuedAt.as[FiniteDuration] match {
             case Right(issuedAt) =>
-              val issuedAtSkewed = issuedAt.minus(clockSkew)
-              F.raiseWhen(currentTime < issuedAtSkewed)(new TokenNotYetIssued(issuedAt))
+              F.raiseWhen(currentTime + clockSkew < issuedAt)(new TokenNotYetIssued(issuedAt))
             case Left(_) =>
               F.raiseError(new InvalidIssuedAt(issuedAt))
           }
@@ -886,8 +903,7 @@ object JwtVerification {
         F.whenA(checkNotBefore) {
           notBefore.as[FiniteDuration] match {
             case Right(notBefore) =>
-              val notBeforeSkewed = notBefore.minus(clockSkew)
-              F.raiseWhen(currentTime < notBeforeSkewed)(new TokenNotYetValid(notBefore))
+              F.raiseWhen(currentTime + clockSkew < notBefore)(new TokenNotYetValid(notBefore))
             case Left(_) =>
               F.raiseError(new InvalidNotBefore(notBefore))
           }
