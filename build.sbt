@@ -18,7 +18,7 @@ inThisBuild(
   Seq(
     crossScalaVersions := Seq(scala213Version, scala3Version),
     developers := List(tlGitHubDev("vlovgr", "Viktor Rudebeck")),
-    githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17")),
+    githubWorkflowJavaVersions := Seq(JavaSpec.temurin("21")),
     githubWorkflowTargetBranches := Seq("**"),
     githubWorkflowBuildPreamble := Seq(
       WorkflowStep.Run(
