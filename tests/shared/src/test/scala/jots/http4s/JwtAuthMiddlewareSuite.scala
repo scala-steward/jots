@@ -40,6 +40,7 @@ import org.http4s.Response
 import org.http4s.Status
 import org.http4s.headers.Authorization
 import org.http4s.headers.`WWW-Authenticate`
+import scala.concurrent.duration.*
 import scodec.bits.ByteVector
 import weaver.SimpleIOSuite
 
@@ -124,6 +125,15 @@ object JwtAuthMiddlewareSuite extends SimpleIOSuite {
 
   test("JwtAuthMiddleware.raiseOtherErrors") {
     val error = new RuntimeException("the key set could not be fetched")
+    val verification = JwtVerification.verifyWith[IO](_ => IO.raiseError(error))
+    for {
+      result <- respondTo(verification, requestWith(ExampleHmacJwt.HS256.signedJwt)).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(`error`) => () }
+    } yield success
+  }
+
+  test("JwtAuthMiddleware.raiseExpiredKeySet") {
+    val error = new RefreshingJwtVerification.ExpiredKeySet(1.hour, None)
     val verification = JwtVerification.verifyWith[IO](_ => IO.raiseError(error))
     for {
       result <- respondTo(verification, requestWith(ExampleHmacJwt.HS256.signedJwt)).attempt
