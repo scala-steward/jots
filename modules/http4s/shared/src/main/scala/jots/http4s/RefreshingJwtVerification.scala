@@ -45,6 +45,7 @@ import org.http4s.client.Client
 import org.http4s.client.middleware.Retry
 import org.typelevel.ci.CIString
 import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NoStackTrace
 
 /**
   * [[JwtVerification]] backed by a periodically refreshed [[JwkSet]].
@@ -212,7 +213,11 @@ object RefreshingJwtVerification {
     * key age, with the most recent refresh failure as the cause.
     */
   final class ExpiredKeySet(maxKeyAge: FiniteDuration, cause: Option[Throwable])
-    extends JwtException(s"the key set was not refreshed within the max key age of $maxKeyAge", cause)
+    extends RuntimeException(
+      s"the key set was not refreshed within the max key age of $maxKeyAge",
+      cause.orNull
+    )
+    with NoStackTrace
 
   private[jots] def fromBuilder[F[_]](
     builder: RefreshingJwtVerificationBuilder[F]
