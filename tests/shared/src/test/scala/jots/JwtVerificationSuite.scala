@@ -869,6 +869,18 @@ object JwtVerificationSuite extends SimpleIOSuite {
     } yield success
   }
 
+  test("JwtVerification.rejectShortEcdsaSignature") {
+    val jwt = ExampleEcdsaJwt.ES512Jwk.signedJwt
+    val (r, s) = jwt.signature.toByteVector.splitAt(66)
+    val signed = SignedJwt(jwt.header, jwt.claims, JwtSignature(r.tail ++ s.tail))
+
+    for {
+      verification <- ExampleEcdsaJwt.ES512Jwk.verification
+      result <- signed.verifyWith(verification).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidSignature) => () }
+    } yield expect(r.head == 0 && s.head == 0)
+  }
+
   test("JwtVerification.eddsaAll.acceptsEdDSA") {
     val example = ExampleEddsaJwt.EdDSAPkcs8
 
