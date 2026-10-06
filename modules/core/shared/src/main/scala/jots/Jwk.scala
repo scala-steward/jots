@@ -77,6 +77,10 @@ sealed abstract class Jwk {
   /**
     * Returns the key without any private key parameters, or
     * a [[JwtException]] if the key is not an asymmetric key.
+    *
+    * Note private key operations (key_ops) are replaced with
+    * the corresponding public key operations. For example, a
+    * `sign` operation is replaced with `verify`.
     */
   def toPublicJwk: Either[JwtException, Jwk]
 
@@ -127,14 +131,30 @@ object Jwk {
 
     override def toPublicJwk: Either[InvalidPublicKey, Jwk] =
       keyType match {
-        case JwkKeyTypes.EC => Right(remove("d"))
-        case JwkKeyTypes.OKP => Right(remove("d"))
-        case JwkKeyTypes.RSA => Right(remove("d", "p", "q", "dp", "dq", "qi", "oth"))
+        case JwkKeyTypes.EC => Right(toPublic("d"))
+        case JwkKeyTypes.OKP => Right(toPublic("d"))
+        case JwkKeyTypes.RSA => Right(toPublic("d", "p", "q", "dp", "dq", "qi", "oth"))
         case _ => Left(new InvalidPublicKey(s"unsupported key type [${keyType.name}]"))
       }
 
-    private def remove(keys: String*): Jwk =
-      copy(toJsonObject = toJsonObject.filterKeys(key => !keys.contains(key)))
+    private def toPublic(privateKeys: String*): Jwk = {
+      val publicKey = toJsonObject.filterKeys(key => !privateKeys.contains(key))
+      publicKey("key_ops").flatMap(_.as[List[String]].toOption) match {
+        case Some(operations) =>
+          val publicOperations = operations.map(publicKeyOperation).distinct.map(Json.fromString)
+          copy(toJsonObject = publicKey.add("key_ops", Json.fromValues(publicOperations)))
+        case None =>
+          copy(toJsonObject = publicKey)
+      }
+    }
+
+    private def publicKeyOperation(operation: String): String =
+      operation match {
+        case "sign" => "verify"
+        case "decrypt" => "encrypt"
+        case "unwrapKey" => "wrapKey"
+        case _ => operation
+      }
 
     override def toPublicKey: Either[InvalidPublicKey, PublicKey] =
       keyType match {
