@@ -130,11 +130,15 @@ private[crypto] trait CryptoCompanionPlatform {
     Sync[F].delay {
       val keySpec = new X509EncodedKeySpec(publicKey.toX509Spki.toArrayUnsafe)
       val key = KeyFactory.getInstance("EC").generatePublic(keySpec)
-      val signing = java.security.Signature.getInstance(nameOf(algorithm))
-      signing.initVerify(key)
-      signing.update(message.toArrayUnsafe)
-      try Verified(signing.verify(signature.toByteVector.toArrayUnsafe))
-      catch { case _: SignatureException => Verified.Invalid }
+      val rawSig = signature.toByteVector.toArrayUnsafe
+      if (rawSig.length != algorithm.fieldSize * 2) Verified.Invalid
+      else {
+        val signing = java.security.Signature.getInstance(nameOf(algorithm))
+        signing.initVerify(key)
+        signing.update(message.toArrayUnsafe)
+        try Verified(signing.verify(rawSig))
+        catch { case _: SignatureException => Verified.Invalid }
+      }
     }
 
   private[this] def verifyEddsa[F[_]: Sync](
