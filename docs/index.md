@@ -34,7 +34,7 @@ Signing and verification is covered in the [introduction](introduction.md).
 
 The library relies on each platform's native cryptography. The minimum required runtime version depends on the platform and algorithms being used. Prefer the latest runtime version available, as it usually has the best security posture. Following is some general guidance on minimum recommended versions.
 
-- For Scala on the JVM, use Java 17 (LTS) or a later version.
+- For Scala on the JVM, use Java 21 (LTS) or a later version.
 - For Scala.js on Node.js, use Node.js 22 (LTS) or a later version.
 - For Scala Native using OpenSSL, use OpenSSL 3.x or a later version.
 
