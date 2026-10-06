@@ -111,12 +111,14 @@ object JwtSignature {
     * signature in its `String` representation.
     */
   def fromBase64UrlNoPad(signature: String): Either[JwtException, JwtSignature] =
-    ByteVector.fromBase64Descriptive(signature, Base64UrlNoPad) match {
-      case Right(_) if hasUnusedBitsSet(signature) =>
-        Left(new InvalidJwtSignature("the last Base64UrlNoPad character has unused bits set"))
-      case Right(signature) => Right(JwtSignature.fromByteVector(signature))
-      case Left(details) => Left(new InvalidJwtSignature(s"failed to decode as Base64UrlNoPad: $details"))
-    }
+    if (signature.forall(isBase64Url))
+      ByteVector.fromBase64Descriptive(signature, Base64UrlNoPad) match {
+        case Right(_) if hasUnusedBitsSet(signature) =>
+          Left(new InvalidJwtSignature("the last Base64UrlNoPad character has unused bits set"))
+        case Right(signature) => Right(JwtSignature.fromByteVector(signature))
+        case Left(details) => Left(new InvalidJwtSignature(s"failed to decode as Base64UrlNoPad: $details"))
+      }
+    else Left(new InvalidJwtSignature("only Base64UrlNoPad characters are allowed"))
 
   /*
    * Unused bits must be unset, otherwise there are
@@ -128,6 +130,9 @@ object JwtSignature {
       case 3 => (Base64UrlNoPad.toIndex(signature.last) & 0x03) != 0
       case _ => false
     }
+
+  private def isBase64Url(c: Char): Boolean =
+    ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '-' || c == '_'
 
   /**
     * Returns a new [[JwtSignature]] from the specified bytes.

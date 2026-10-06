@@ -56,4 +56,12 @@ object JwtSignatureSuite extends SimpleIOSuite with Checkers with Discipline {
       }
     }
   }
+
+  test("JwtSignature.fromBase64UrlNoPad.rejectNonBase64UrlCharacters") {
+    forall { (signature: JwtSignature) =>
+      val encoded = signature.toBase64UrlNoPad
+      expect(JwtSignature.fromBase64UrlNoPad(' ' +: encoded).isLeft) &&
+      expect(JwtSignature.fromBase64UrlNoPad(encoded :+ '\u0000').isLeft)
+    }
+  }
 }
