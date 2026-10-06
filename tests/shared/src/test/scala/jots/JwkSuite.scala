@@ -58,6 +58,15 @@ object JwkSuite extends SimpleIOSuite with Checkers with Discipline {
     }
   }
 
+  test("Jwk.toPublicJwk.mapsKeyOperations") {
+    forall(Gen.oneOf(jwkEcdsaKeyPairGen, jwkEddsaKeyPairGen, jwkRsaKeyPairGen)) {
+      case (privateKey, publicKey) =>
+        val signKey = Jwk.fromJsonObject(privateKey.toJsonObject.add("key_ops", List("sign").asJson))
+        val verifyKey = Jwk.fromJsonObject(publicKey.toJsonObject.add("key_ops", List("verify").asJson))
+        expect.eql(verifyKey.toOption, signKey.flatMap(_.toPublicJwk).toOption)
+    }
+  }
+
   test("Jwk.toPublicJwk.rejectSecretKey") {
     forall(jwkOctGen) { jwk =>
       expect(jwk.toPublicJwk.isLeft)
