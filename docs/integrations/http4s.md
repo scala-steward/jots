@@ -156,6 +156,7 @@ The `RefreshingJwtVerificationBuilder` can be used to customize the following de
 
 - The key set will be automatically refreshed every 60 minutes (the `refreshInterval` setting).
 - If the refresh attempt failed, we retry after 60 seconds (the `refreshIntervalOnError` setting).
+- Keys from the last successful refresh are used without any age limit in place (the `maxKeyAge` setting).
 - Missing keys cause an extra refresh at most every 60 seconds (`minRefreshIntervalOnMissingKey`).
 - Retries with a jittered exponential backoff, up to 4 retries and max 5 seconds between (`retryPolicy`).
 - The `Uri` for the key set must use HTTPS, except for loopback hosts like `localhost` (`requireHttps`).
