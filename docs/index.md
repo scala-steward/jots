@@ -55,9 +55,9 @@ Refer to the table below for a list of supported signing algorithms.
 | `PS256`   | RSASSA-PSS using SHA-256 and MGF1 with SHA-256 |
 | `PS384`   | RSASSA-PSS using SHA-384 and MGF1 with SHA-384 |
 | `PS512`   | RSASSA-PSS using SHA-512 and MGF1 with SHA-512 |
-| `RS256`   | RSASSA-PKCS-v1_5 using SHA-256                 |
-| `RS384`   | RSASSA-PKCS-v1_5 using SHA-384                 |
-| `RS512`   | RSASSA-PKCS-v1_5 using SHA-512                 |
+| `RS256`   | RSASSA-PKCS1-v1_5 using SHA-256                |
+| `RS384`   | RSASSA-PKCS1-v1_5 using SHA-384                |
+| `RS512`   | RSASSA-PKCS1-v1_5 using SHA-512                |
 
 ## Dependencies
 
