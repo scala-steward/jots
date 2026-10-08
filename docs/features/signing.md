@@ -191,7 +191,7 @@ signedJwt.map(_.show).unsafeRunSync()
 
 ### JSON Web Key
 
-There is a `Jwk` type representing a JSON Web Key (JWK). A `Jwk` can be used for signing as long as it meets all of the following criteria. For keys which do not match the criteria, an exception is raised.
+There is a `Jwk` type representing a [JSON Web Key (JWK)](https://www.rfc-editor.org/rfc/rfc7517.html). A `Jwk` can be used for signing as long as it meets all of the following criteria. For keys which do not match the criteria, an exception is raised.
 
 1. If `key_ops` is specified, it must contain the `sign` operation.
 2. If `use` is specified for the key, it must be set to `sig` (signature).

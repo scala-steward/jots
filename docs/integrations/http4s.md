@@ -14,7 +14,7 @@ If you are using Scala.js or Scala Native, replace the `%%` with `%%%` above.
 
 ## Request Headers
 
-There is support for both reading and writing `SignedJwt` as `Authorization: Bearer <token>` headers from and to requests. In the following example, we define a `SignedJwt` for demonstration purposes using syntax from the [testing module](../features/testing.md#string-interpolators). We then proceed to create a request with the `SignedJwt` in the headers and then read it back again.
+There is support for both reading and writing `SignedJwt` as [`Authorization: Bearer <token>`](https://www.rfc-editor.org/rfc/rfc6750.html#section-2.1) headers from and to requests. In the following example, we define a `SignedJwt` for demonstration purposes using syntax from the [testing module](../features/testing.md#string-interpolators). We then proceed to create a request with the `SignedJwt` in the headers and then read it back again.
 
 ```scala mdoc:silent
 import cats.effect.IO
