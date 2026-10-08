@@ -103,7 +103,7 @@ val publicKey: PublicKey =
 
 ### Key Requirements
 
-In the example above, we note creating `JwtVerification` instances returns an effect and not `JwtVerification` directly. The effect is checking whether the public or secret key is sufficiently strong or not according to the JWT specification. When the [key requirements](signing.md#key-requirements) are not met, an exception will be raised.
+In the example above, we note creating `JwtVerification` instances returns an effect and not `JwtVerification` directly. The effect checks whether the public or secret key is sufficiently strong or not according to the [JSON Web Algorithms (JWA)](https://www.rfc-editor.org/rfc/rfc7518.html) specification. When the [key requirements](signing.md#key-requirements) are not met, an exception will be raised.
 
 While it is _not_ recommended, the key requirements check can be disabled using `JwtVerificationBuilder` by using the `withCheckKeyRequirements` function. It is also possible to use separate effects for creating `JwtVerification` and for verifying tokens. The following example shows how both can be done.
 
@@ -195,7 +195,7 @@ If the default verifications are not enough, resort to [custom verifications](#c
 
 ### JSON Web Key Set
 
-There is a `Jwk` type representing a JSON Web Key (JWK) and a `JwkSet` type for JWK Set. A `JwkSet` can be used for verification as long as it contains at least one key that meet all of the following criteria. Keys which do not match the criteria will be filtered out, and if there are no keys available after filtering, an exception is raised.
+There is a `Jwk` type representing a [JSON Web Key (JWK)](https://www.rfc-editor.org/rfc/rfc7517.html) and a `JwkSet` type for [JWK Set](https://www.rfc-editor.org/rfc/rfc7517.html#section-5). A `JwkSet` can be used for verification as long as it contains at least one key that meet all of the following criteria. Keys which do not match the criteria will be filtered out, and if there are no keys available after filtering, an exception is raised.
 
 1. The `kid` (Key ID) parameter must be specified for the key.
 2. If `key_ops` is specified, it must contain the `verify` operation.

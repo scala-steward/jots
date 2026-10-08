@@ -122,7 +122,7 @@ Note we use `SyncIO`, and later `unsafeRunSync()`, to show the final result. In 
 
 ### Key Requirements
 
-In the example above, we note creating `JwtSigning` instances returns an effect and not `JwtSigning` directly. The effect is checking whether the private or secret key is sufficiently strong or not according to the JWT specification. When the key requirements in the following list are not met, an exception will be raised. The key requirements also apply for public and secret keys when creating `JwtVerification` instances for [verifying tokens](verification.md#key-requirements).
+In the example above, we note creating `JwtSigning` instances returns an effect and not `JwtSigning` directly. The effect checks whether the private or secret key is sufficiently strong or not according to the [JSON Web Algorithms (JWA)](https://www.rfc-editor.org/rfc/rfc7518.html) specification. When the key requirements in the following list are not met, an exception will be raised. The key requirements also apply for public and secret keys when creating `JwtVerification` instances for [verifying tokens](verification.md#key-requirements).
 
 | Algorithm | Key Requirement                   | Key Recommendation             |
 | --------- | --------------------------------- | ------------------------------ |
@@ -191,7 +191,7 @@ signedJwt.map(_.show).unsafeRunSync()
 
 ### JSON Web Key
 
-There is a `Jwk` type representing a JSON Web Key (JWK). A `Jwk` can be used for signing as long as it meets all of the following criteria. For keys which do not match the criteria, an exception is raised.
+There is a `Jwk` type representing a [JSON Web Key (JWK)](https://www.rfc-editor.org/rfc/rfc7517.html). A `Jwk` can be used for signing as long as it meets all of the following criteria. For keys which do not match the criteria, an exception is raised.
 
 1. If `key_ops` is specified, it must contain the `sign` operation.
 2. If `use` is specified for the key, it must be set to `sig` (signature).
