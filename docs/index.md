@@ -79,6 +79,33 @@ For Scala.js and Scala Native version support, refer to the following table.
 | `jots-http4s`  | Scala.js @SCALA_JS_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) | Scala Native @SCALA_NATIVE_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) |
 | `jots-testing` | Scala.js @SCALA_JS_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) | Scala Native @SCALA_NATIVE_MAJOR_MINOR_VERSION@ (Scala @SCALA_PUBLISH_VERSIONS@) |
 
+## Specifications
+
+Refer to the table below for specifications relevant to the library.
+
+| Specification                                           | Description                                               |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280.html) | Internet X.509 PKI Certificate and CRL Profile            |
+| [RFC 5915](https://www.rfc-editor.org/rfc/rfc5915.html) | Elliptic Curve Private Key Structure (SEC 1)              |
+| [RFC 5958](https://www.rfc-editor.org/rfc/rfc5958.html) | Asymmetric Key Packages (PKCS #8)                         |
+| [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750.html) | OAuth 2.0 Bearer Token Usage                              |
+| [RFC 7468](https://www.rfc-editor.org/rfc/rfc7468.html) | Textual Encodings of PKIX, PKCS, and CMS Structures (PEM) |
+| [RFC 7515](https://www.rfc-editor.org/rfc/rfc7515.html) | JSON Web Signature (JWS)                                  |
+| [RFC 7517](https://www.rfc-editor.org/rfc/rfc7517.html) | JSON Web Key (JWK)                                        |
+| [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518.html) | JSON Web Algorithms (JWA)                                 |
+| [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519.html) | JSON Web Token (JWT)                                      |
+| [RFC 8017](https://www.rfc-editor.org/rfc/rfc8017.html) | RSA Cryptography Specifications (PKCS #1)                 |
+| [RFC 8037](https://www.rfc-editor.org/rfc/rfc8037.html) | CFRG ECDH and Signatures in JOSE                          |
+| [RFC 8725](https://www.rfc-editor.org/rfc/rfc8725.html) | JSON Web Token Best Current Practices                     |
+| [RFC 9864](https://www.rfc-editor.org/rfc/rfc9864.html) | Fully-Specified Algorithms for JOSE and COSE              |
+
+The following IANA registries list the registered names used by the library.
+
+- [JSON Object Signing and Encryption (JOSE)](https://www.iana.org/assignments/jose) for algorithms, header parameters and keys.
+- [JSON Web Token (JWT)](https://www.iana.org/assignments/jwt) for the standard registered claims normally used in JWTs.
+- [Media Types](https://www.iana.org/assignments/media-types) for the media types for JWT, JSON Web Key (JWK) and JWK Set.
+- [HTTP Authentication Schemes](https://www.iana.org/assignments/http-authschemes) for the `Bearer` authentication scheme.
+
 ## Compatibility
 
 Backwards binary compatibility for the library is guaranteed between patch versions.
