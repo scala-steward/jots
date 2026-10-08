@@ -103,7 +103,7 @@ val publicKey: PublicKey =
 
 ### Key Requirements
 
-In the example above, we note creating `JwtVerification` instances returns an effect and not `JwtVerification` directly. The effect is checking whether the public or secret key is sufficiently strong or not according to the JWT specification. When the [key requirements](signing.md#key-requirements) are not met, an exception will be raised.
+In the example above, we note creating `JwtVerification` instances returns an effect and not `JwtVerification` directly. The effect checks whether the public or secret key is sufficiently strong or not according to the [JSON Web Algorithms (JWA)](https://www.rfc-editor.org/rfc/rfc7518.html) specification. When the [key requirements](signing.md#key-requirements) are not met, an exception will be raised.
 
 While it is _not_ recommended, the key requirements check can be disabled using `JwtVerificationBuilder` by using the `withCheckKeyRequirements` function. It is also possible to use separate effects for creating `JwtVerification` and for verifying tokens. The following example shows how both can be done.
 

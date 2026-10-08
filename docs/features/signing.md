@@ -122,7 +122,7 @@ Note we use `SyncIO`, and later `unsafeRunSync()`, to show the final result. In 
 
 ### Key Requirements
 
-In the example above, we note creating `JwtSigning` instances returns an effect and not `JwtSigning` directly. The effect is checking whether the private or secret key is sufficiently strong or not according to the JWT specification. When the key requirements in the following list are not met, an exception will be raised. The key requirements also apply for public and secret keys when creating `JwtVerification` instances for [verifying tokens](verification.md#key-requirements).
+In the example above, we note creating `JwtSigning` instances returns an effect and not `JwtSigning` directly. The effect checks whether the private or secret key is sufficiently strong or not according to the [JSON Web Algorithms (JWA)](https://www.rfc-editor.org/rfc/rfc7518.html) specification. When the key requirements in the following list are not met, an exception will be raised. The key requirements also apply for public and secret keys when creating `JwtVerification` instances for [verifying tokens](verification.md#key-requirements).
 
 | Algorithm | Key Requirement                   | Key Recommendation             |
 | --------- | --------------------------------- | ------------------------------ |
