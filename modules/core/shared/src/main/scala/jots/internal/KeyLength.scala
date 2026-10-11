@@ -50,6 +50,17 @@ private[jots] object KeyLength {
     */
   case object Unknown extends KeyLength
 
+  /**
+    * Returns the name of the key type, for example `RSA`.
+    */
+  def keyType(keyLength: KeyLength): String =
+    keyLength match {
+      case Rsa(_) => "RSA"
+      case Ecdsa(_) => "ECDSA"
+      case Eddsa(_) => "EdDSA"
+      case Unknown => "unknown"
+    }
+
   def fromPrivateKey(privateKey: PrivateKey): KeyLength = {
     val pkcs8 =
       privateKey.toPkcs8

@@ -96,6 +96,11 @@ object JwtSigning {
         KeyLength.fromPrivateKey(privateKey) match {
           case KeyLength.Unknown =>
             F.raiseError[Unit](new InvalidPrivateKey("unable to determine private key type and length"))
+          case keyLength if !KeyRequirement.isType(algorithm.keyRequirement, keyLength) =>
+            val keyType = KeyLength.keyType(keyLength)
+            F.raiseError[Unit](
+              new InvalidPrivateKey(s"$keyType keys cannot be used with [${algorithm.name}]")
+            )
           case keyLength =>
             KeyRequirement.check(algorithm.keyRequirement, keyLength)
         }
