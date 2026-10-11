@@ -72,6 +72,20 @@ object JwtClaimsSuite extends SimpleIOSuite with Checkers with Discipline {
     )
   }
 
+  test("JwtClaims.addOption") {
+    forall { (claims: JwtClaims, name: String, value: String) =>
+      val added = claims.add(name, value.asJson)
+      expect.eql(added, claims.addOption(name, Some(value.asJson))) &&
+      expect.eql(added.remove(name), added.addOption(name, None))
+    }
+  }
+
+  test("JwtClaims.remove") {
+    forall { (claims: JwtClaims, name: String, value: String) =>
+      expect.eql(None, claims.add(name, value.asJson).remove(name).toJsonObject(name))
+    }
+  }
+
   pureTest("JwtClaims.withAudience") {
     val audiences = List("https://api.example.com", "https://admin.example.com")
     expect.eql(

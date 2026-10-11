@@ -80,6 +80,23 @@ object JwtAlgorithmSuite extends SimpleIOSuite with Checkers with Discipline {
     expect.eql(JwtRsaAlgorithm.All.toList, rsa)
   }
 
+  pureTest("JwtAlgorithm.All") {
+    val hmac: Set[JwtAlgorithm] = JwtHmacAlgorithm.All.toList.toSet
+    val asymmetric: Set[JwtAlgorithm] = JwtAsymmetricAlgorithm.All.toList.toSet
+
+    expect.eql(hmac ++ asymmetric, JwtAlgorithm.All.toList.toSet) &&
+    expect.eql((hmac ++ asymmetric).size, JwtAlgorithm.All.length)
+  }
+
+  pureTest("JwtAsymmetricAlgorithm.All") {
+    val ecdsa: Set[JwtAsymmetricAlgorithm] = JwtEcdsaAlgorithm.All.toList.toSet
+    val eddsa: Set[JwtAsymmetricAlgorithm] = JwtEddsaAlgorithm.All.toList.toSet
+    val rsa: Set[JwtAsymmetricAlgorithm] = JwtRsaAlgorithm.All.toList.toSet
+
+    expect.eql(ecdsa ++ eddsa ++ rsa, JwtAsymmetricAlgorithm.All.toList.toSet) &&
+    expect.eql((ecdsa ++ eddsa ++ rsa).size, JwtAsymmetricAlgorithm.All.length)
+  }
+
   private def showTest[A <: JwtAlgorithm: Arbitrary: Show] =
     forall { (algorithm: A) =>
       expect.eql(Show[A].show(algorithm), algorithm.show) &&
