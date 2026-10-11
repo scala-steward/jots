@@ -980,6 +980,26 @@ object JwtVerificationSuite extends SimpleIOSuite {
     } yield success
   }
 
+  test("JwtVerification.rejectPssKeyForRsaAlgorithm") {
+    val publicKeys =
+      List(
+        ExampleRsaJwt.PS256Pkcs1PssRestricted.publicKey,
+        ExampleRsaJwt.PS256Pkcs1PssRestrictedWithoutParameters.publicKey
+      )
+
+    val algorithms =
+      List(JwtRsaAlgorithm.RS256, JwtRsaAlgorithm.RS384, JwtRsaAlgorithm.RS512)
+
+    for {
+      results <- (publicKeys, algorithms).tupled.traverse { case (publicKey, algorithm) =>
+        JwtVerificationBuilder.default[IO].rsa(algorithm, publicKey).build.attempt
+      }
+      _ <- results.traverse_(result =>
+        matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidPublicKey) => () }
+      )
+    } yield success
+  }
+
   test("JwtVerification.rejectUnusablePublicKey") {
     val publicKey = PublicKey.fromX509Spki(ByteVector(1, 2, 3))
     val signed = tokenWithAlgorithm(JwtAlgorithm.RS256, ByteVector.fill(256)(1))
