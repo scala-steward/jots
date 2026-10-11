@@ -97,16 +97,18 @@ object SignedJwtClaims {
     * claims in its `String` representation.
     */
   def fromBase64UrlNoPad(claims: String): Either[JwtException, SignedJwtClaims] =
-    for {
-      bytes <- ByteVector
-        .fromBase64Descriptive(claims, Base64UrlNoPad)
-        .leftMap(details => new InvalidSignedJwtClaims(s"failed to decode as Base64UrlNoPad: $details"))
-      string <- bytes.decodeUtf8
-        .leftMap(cause => new InvalidSignedJwtClaims("failed to decode as UTF-8", Some(cause)))
-      jsonObject <- decode(string)
-        .leftMap(cause => new InvalidSignedJwtClaims("failed to decode as JsonObject", Some(cause)))
-      signed = new SignedJwtClaimsImpl(jsonObject, claims)
-    } yield signed
+    if (claims.forall(isBase64Url))
+      for {
+        bytes <- ByteVector
+          .fromBase64Descriptive(claims, Base64UrlNoPad)
+          .leftMap(details => new InvalidSignedJwtClaims(s"failed to decode as Base64UrlNoPad: $details"))
+        string <- bytes.decodeUtf8
+          .leftMap(cause => new InvalidSignedJwtClaims("failed to decode as UTF-8", Some(cause)))
+        jsonObject <- decode(string)
+          .leftMap(cause => new InvalidSignedJwtClaims("failed to decode as JsonObject", Some(cause)))
+        signed = new SignedJwtClaimsImpl(jsonObject, claims)
+      } yield signed
+    else Left(new InvalidSignedJwtClaims("only Base64UrlNoPad characters are allowed"))
 
   /**
     * Returns a new [[SignedJwtClaims]] from the specified claims.
@@ -131,4 +133,7 @@ object SignedJwtClaims {
 
   private def decode(s: String): Either[Error, JsonObject] =
     JsonDepth.decode[JsonObject](parser, s)
+
+  private def isBase64Url(c: Char): Boolean =
+    ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '-' || c == '_'
 }

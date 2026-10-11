@@ -99,16 +99,18 @@ object SignedJwtHeader {
     * header in its `String` representation.
     */
   def fromBase64UrlNoPad(header: String): Either[JwtException, SignedJwtHeader] =
-    for {
-      bytes <- ByteVector
-        .fromBase64Descriptive(header, Base64UrlNoPad)
-        .leftMap(details => new InvalidSignedJwtHeader(s"failed to decode as Base64UrlNoPad: $details"))
-      string <- bytes.decodeUtf8
-        .leftMap(cause => new InvalidSignedJwtHeader("failed to decode as UTF-8", Some(cause)))
-      jsonObject <- decode(string)
-        .leftMap(cause => new InvalidSignedJwtHeader("failed to decode as JsonObject", Some(cause)))
-      signed = new SignedJwtHeaderImpl(jsonObject, header)
-    } yield signed
+    if (header.forall(isBase64Url))
+      for {
+        bytes <- ByteVector
+          .fromBase64Descriptive(header, Base64UrlNoPad)
+          .leftMap(details => new InvalidSignedJwtHeader(s"failed to decode as Base64UrlNoPad: $details"))
+        string <- bytes.decodeUtf8
+          .leftMap(cause => new InvalidSignedJwtHeader("failed to decode as UTF-8", Some(cause)))
+        jsonObject <- decode(string)
+          .leftMap(cause => new InvalidSignedJwtHeader("failed to decode as JsonObject", Some(cause)))
+        signed = new SignedJwtHeaderImpl(jsonObject, header)
+      } yield signed
+    else Left(new InvalidSignedJwtHeader("only Base64UrlNoPad characters are allowed"))
 
   /**
     * Returns a new [[SignedJwtHeader]] from the specified header.
@@ -133,4 +135,7 @@ object SignedJwtHeader {
 
   private def decode(s: String): Either[Error, JsonObject] =
     JsonDepth.decode[JsonObject](parser, s)
+
+  private def isBase64Url(c: Char): Boolean =
+    ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '-' || c == '_'
 }
