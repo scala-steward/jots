@@ -28,6 +28,7 @@ import jots.JwtAlgorithm
 import jots.JwtBuilder
 import jots.JwtDecoder
 import jots.JwtEddsaAlgorithm
+import jots.JwtException
 import jots.JwtHeader
 import jots.JwtSignature
 import jots.JwtVerification
@@ -136,6 +137,15 @@ object JwtAuthMiddlewareSuite extends SimpleIOSuite {
 
   test("JwtAuthMiddleware.raiseExpiredKeySet") {
     val error = new RefreshingJwtVerification.ExpiredKeySet(1.hour, None)
+    val verification = JwtVerification.verifyWith[IO](_ => IO.raiseError(error))
+    for {
+      result <- respondTo(verification, requestWith(ExampleHmacJwt.HS256.signedJwt)).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(`error`) => () }
+    } yield success
+  }
+
+  test("JwtAuthMiddleware.raiseUnavailableKeySet") {
+    val error = new RefreshingJwtVerification.UnavailableKeySet(new JwtException.EmptyKeySet())
     val verification = JwtVerification.verifyWith[IO](_ => IO.raiseError(error))
     for {
       result <- respondTo(verification, requestWith(ExampleHmacJwt.HS256.signedJwt)).attempt

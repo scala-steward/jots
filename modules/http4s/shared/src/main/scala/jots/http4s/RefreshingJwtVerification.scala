@@ -57,9 +57,11 @@ import scala.util.control.NoStackTrace
   *
   * Keys are refreshed in the background, so all verifications and the
   * [[keys]] method will semantically block until some initial key set
-  * has been retrieved. Errors will be surfaced until the initial keys
-  * are available. Subsequent errors retrieving keys continues to keep
-  * the current [[JwkSet]] instead of surfacing the errors.
+  * has been retrieved. Errors will be surfaced, using the cause of an
+  * [[RefreshingJwtVerification.UnavailableKeySet]], until the initial
+  * keys are available. Subsequent errors retrieving keys continues to
+  * keep the current [[JwkSet]] instead of surfacing the errors, until
+  * the keys are older than the max key age.
   *
   * When verification fails because there is no key in the current set
   * with a matching key id (kid), an extra refresh is requested, and a
@@ -68,13 +70,11 @@ import scala.util.control.NoStackTrace
   * already changed while verifying, then no extra refresh is run, and
   * the changed keys are used for the second attempt.
   *
-  * If the `Resource` is released, verification will continue with the
-  * current [[JwkSet]] and refreshing stops. When a key is missing, no
-  * extra refresh is requested. If no initial key set is available and
-  * no error occurred, a `CancellationException` is raised instead.
-  *
-  * The [[RefreshingJwtVerificationBuilder.refreshWith]] function accepts
-  * the function to use for refreshing [[JwtVerification]].
+  * If the resource is released, refreshing stops and the verification
+  * continues with the current [[JwkSet]], until the keys become older
+  * than the max key age. When a key is missing, no extra refresh will
+  * be requested. If no initial key set was retrieved, and if no error
+  * occurred, then a `CancellationException` is raised instead.
   *
   * The [[RefreshingJwtVerificationBuilder]] provides customization of
   * the default settings. Notably, logging is no-op by default, so set
@@ -96,14 +96,22 @@ object RefreshingJwtVerification {
   def apply[F[_]](implicit F: RefreshingJwtVerification[F]): RefreshingJwtVerification[F] = F
 
   /**
-    * Exception raised when the keys were not refreshed within the max
-    * key age, with the most recent refresh failure as the cause.
+    * Exception raised when keys were not refreshed within a
+    * max key age, with the most recent failure as the cause.
     */
   final class ExpiredKeySet(maxKeyAge: FiniteDuration, cause: Option[Throwable])
     extends RuntimeException(
       s"the key set was not refreshed within the max key age of $maxKeyAge",
       cause.orNull
     )
+    with NoStackTrace
+
+  /**
+    * Exception raised when no key set is available yet, since
+    * refreshing failed, with the refresh failure as the cause.
+    */
+  final class UnavailableKeySet(cause: Throwable)
+    extends RuntimeException("key set is not available", cause)
     with NoStackTrace
 
   private[jots] def fromBuilder[F[_]](
@@ -257,6 +265,13 @@ object RefreshingJwtVerification {
         new IllegalArgumentException(s"the key set uri must use https, was [${uri.renderString}]")
       )
 
+    def ensureAvailable(result: StateResult[F]): F[State[F]] =
+      result match {
+        case Right(state) => F.pure(state)
+        case Left(cancel: CancellationException) => F.raiseError(cancel)
+        case Left(error) => F.raiseError(new UnavailableKeySet(error))
+      }
+
     def ensureMaxKeyAge(state: State[F]): F[State[F]] =
       maxKeyAge match {
         case maxKeyAge: FiniteDuration =>
@@ -282,9 +297,9 @@ object RefreshingJwtVerification {
       private def state: F[State[F]] =
         ref.get.flatMap {
           case Phase.Ready(state) => ensureMaxKeyAge(state)
-          case Phase.Stopped(result) => result.liftTo[F].flatMap(ensureMaxKeyAge)
-          case Phase.Unavailable(error) => error.raiseError
-          case Phase.Pending(deferred) => deferred.get.rethrow
+          case Phase.Stopped(result) => ensureAvailable(result).flatMap(ensureMaxKeyAge)
+          case Phase.Unavailable(error) => ensureAvailable(error.asLeft)
+          case Phase.Pending(deferred) => deferred.get.flatMap(ensureAvailable)
         }
 
       override def verify(jwt: SignedJwt): F[VerifiedJwt] =
@@ -316,8 +331,8 @@ object RefreshingJwtVerification {
   private val maxDepth: Int = 32
 
   /*
-   * Deeply nested `Json` can overflow the stack when it is
-   * printed, hashed or compared, so reject it before decoding.
+   * It's possible for deeply nested `Json` to overflow the stack
+   * when printed, hashed or compared, so reject before decoding.
    */
   private def exceedsMaxDepth(json: Json): Boolean = {
     @tailrec
