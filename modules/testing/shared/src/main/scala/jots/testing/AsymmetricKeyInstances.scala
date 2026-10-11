@@ -596,7 +596,7 @@ private[jots] trait AsymmetricKeyInstances {
   /**
     * Generates RSA private keys of at least 2048 bits.
     */
-  lazy val rsaPrivateKeyGen =
+  lazy val rsaPrivateKeyGen: Gen[PrivateKey] =
     rsaKeyPairGen.map { case (privateKey, _) => privateKey }
 
   /**
