@@ -1156,7 +1156,19 @@ object JwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield success
   }
 
-  test("JwtVerification.jwkSet.rejectSkippedKey") {
+  test("JwtVerification.jwkSet.unusableKeys") {
+    for {
+      verification <- JwtVerificationBuilder
+        .default[IO]
+        .jwkSet(NonEmptyList.of(JwtAlgorithm.HS256), mixedKeySet)
+        .build
+      unusableKeys <- matchOrFailFast[IO](verification) { case verification: JwtJwkSetVerification[IO] =>
+        verification.unusableKeys.map { case (key, _) => key }
+      }
+    } yield expect.eql(mixedKeySet.toList.tail, unusableKeys)
+  }
+
+  test("JwtVerification.jwkSet.rejectUnusableKey") {
     for {
       signed <- sign(JwtClaims("sub" -> "alice".asJson), JwtHeader.default.withKeyId(JwkKeyId("key-2")))
       verification <- JwtVerificationBuilder

@@ -30,10 +30,10 @@ import java.util.concurrent.CancellationException
 import jots.Jwk
 import jots.JwkSet
 import jots.JwtException
+import jots.JwtJwkSetVerification
 import jots.JwtVerification
 import jots.SignedJwt
 import jots.VerifiedJwt
-import jots.internal.SkippedKeys
 import org.http4s.EntityDecoder
 import org.http4s.MediaType
 import org.http4s.Uri
@@ -139,21 +139,21 @@ object RefreshingJwtVerification {
         (keys, decodeFailures) = fetched
         _ <- logDecodeFailures(decodeFailures)
         verification <- builder.verification(keys)
-        _ <- logSkippedKeys(verification)
+        _ <- logUnusableKeys(verification)
         state <- State.next(keys, verification)
       } yield state
 
     def logDecodeFailures(decodeFailures: List[(Json, DecodingFailure)]): F[Unit] =
       decodeFailures.traverseVoid { case (key, failure) =>
         val keyId = key.hcursor.get[String]("kid").toOption.foldMap(keyId => s" with id [$keyId]")
-        logger.warn(failure)(s"Skipped key$keyId which cannot be decoded")
+        logger.warn(failure)(s"Key$keyId unusable since it cannot be decoded")
       }
 
-    def logSkippedKeys(verification: JwtVerification[F]): F[Unit] =
+    def logUnusableKeys(verification: JwtVerification[F]): F[Unit] =
       verification match {
-        case verification: SkippedKeys =>
-          verification.skippedKeys.traverseVoid { case (key, reason) =>
-            logger.warn(reason)(s"Skipped key ${key.show} which cannot be used for verification")
+        case verification: JwtJwkSetVerification[?] =>
+          verification.unusableKeys.traverseVoid { case (key, reason) =>
+            logger.warn(reason)(s"Key ${key.show} is unusable for verification")
           }
         case _ =>
           F.unit
@@ -317,8 +317,8 @@ object RefreshingJwtVerification {
   private[http4s] val decoderSkipInvalidKeys: Decoder[(JwkSet, List[(Json, DecodingFailure)])] = {
     val decoder =
       Decoder[List[Json]].at("keys").map { keys =>
-        val (skipped, decoded) = keys.partitionMap(key => key.as[Jwk].leftMap((key, _)))
-        (JwkSet.fromList(decoded), skipped)
+        val (unusable, decoded) = keys.partitionMap(key => key.as[Jwk].leftMap((key, _)))
+        (JwkSet.fromList(decoded), unusable)
       }
 
     Decoder.instance { cursor =>

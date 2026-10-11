@@ -31,7 +31,6 @@ import jots.crypto.SecretKey
 import jots.internal.KeyAlgorithm
 import jots.internal.KeyLength
 import jots.internal.KeyRequirement
-import jots.internal.SkippedKeys
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
 
@@ -343,11 +342,11 @@ object JwtVerification {
 
     def byKeyId(
       verifications: Map[JwkKeyId, JwtVerification[G]],
-      skipped: List[(Jwk, JwtException)]
+      unusable: List[(Jwk, JwtException)]
     ): JwtVerification[G] =
-      new JwtVerification[G] with SkippedKeys {
-        override val skippedKeys: List[(Jwk, JwtException)] =
-          skipped
+      new JwtJwkSetVerification[G] {
+        override val unusableKeys: List[(Jwk, JwtException)] =
+          unusable
 
         override def verify(jwt: SignedJwt): G[VerifiedJwt] =
           jwt.header.toJsonObject("kid") match {
@@ -406,7 +405,7 @@ object JwtVerification {
         key.toJsonObject("use").forall(_.asString.contains("sig")) &&
         key.toJsonObject("key_ops").forall(_.as[List[String]].exists(_.contains("verify")))
 
-    def keyVerificationOrSkipped(key: Jwk): F[Either[(Jwk, JwtException), (JwkKeyId, JwtVerification[G])]] =
+    def keyVerificationOrUnusable(key: Jwk): F[Either[(Jwk, JwtException), (JwkKeyId, JwtVerification[G])]] =
       keyVerification(key)
         .map(_.asRight[(Jwk, JwtException)])
         .recover { case e: JwtException => (key, e).asLeft }
@@ -425,15 +424,15 @@ object JwtVerification {
 
     keySet.toList
       .filter(isForVerification)
-      .traverse(keyVerificationOrSkipped)
+      .traverse(keyVerificationOrUnusable)
       .flatMap { results =>
-        val (skipped, verifications) = results.partitionMap(identity)
+        val (unusable, verifications) = results.partitionMap(identity)
         if (verifications.isEmpty) {
-          val causes = skipped.map { case (_, cause) => cause }
+          val causes = unusable.map { case (_, cause) => cause }
           F.raiseError(new EmptyKeySet(causes))
         } else {
           val verificationByKeyId = verifications.groupMapReduce(_._1)(_._2)(orElseIfRejectedAlgorithm)
-          F.pure(byKeyId(verificationByKeyId, skipped))
+          F.pure(byKeyId(verificationByKeyId, unusable))
         }
       }
   }
