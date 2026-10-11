@@ -168,11 +168,16 @@ object JwtVerification {
 
     val ensureKeyRequirements: F[Unit] =
       F.whenA(checkKeyRequirements) {
+        val requirements = algorithms.map(_.keyRequirement)
         keyLength match {
           case KeyLength.Unknown =>
             F.raiseError[Unit](new InvalidPublicKey("unable to determine public key type and length"))
+          case keyLength if !requirements.exists(KeyRequirement.isType(_, keyLength)) =>
+            val keyType = KeyLength.keyType(keyLength)
+            val names = algorithms.toList.map(_.name).mkString(",")
+            F.raiseError[Unit](new InvalidPublicKey(s"$keyType keys cannot be used with [$names]"))
           case keyLength =>
-            KeyRequirement.check[F](algorithms.map(_.keyRequirement), keyLength)
+            KeyRequirement.check[F](requirements, keyLength)
         }
       }
 

@@ -902,6 +902,24 @@ object JwtVerificationSuite extends SimpleIOSuite {
     } yield success
   }
 
+  test("JwtVerification.rejectOtherKeyType") {
+    val builders =
+      List(
+        JwtVerificationBuilder.default[IO].ecdsa(JwtEcdsaAlgorithm.ES256, ExampleRsaJwt.RS256Pkcs8.publicKey),
+        JwtVerificationBuilder
+          .default[IO]
+          .eddsa(JwtEddsaAlgorithm.Ed25519, ExampleEcdsaJwt.ES256Pkcs8.publicKey),
+        JwtVerificationBuilder.default[IO].rsa(JwtRsaAlgorithm.RS256, ExampleEddsaJwt.Ed25519Pkcs8.publicKey)
+      )
+
+    for {
+      results <- builders.traverse(_.build.attempt)
+      _ <- results.traverse_(result =>
+        matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidPublicKey) => () }
+      )
+    } yield success
+  }
+
   test("JwtVerification.rejectAlgorithmForOtherEcdsaCurve") {
     val example = ExampleEcdsaJwt.ES256Pkcs8
 

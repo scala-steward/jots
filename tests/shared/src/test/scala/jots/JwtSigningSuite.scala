@@ -110,6 +110,22 @@ object JwtSigningSuite extends SimpleIOSuite with Checkers {
     }
   }
 
+  test("JwtSigning.asymmetric.rejectOtherKeyType") {
+    val builders =
+      List(
+        JwtSigningBuilder.default[IO].ecdsa(JwtEcdsaAlgorithm.ES256, ExampleRsaJwt.RS256Pkcs8.privateKey),
+        JwtSigningBuilder.default[IO].eddsa(JwtEddsaAlgorithm.Ed25519, ExampleEcdsaJwt.ES256Pkcs8.privateKey),
+        JwtSigningBuilder.default[IO].rsa(JwtRsaAlgorithm.RS256, ExampleEddsaJwt.Ed25519Pkcs8.privateKey)
+      )
+
+    builders
+      .traverse(_.build.attempt.map {
+        case Left(_: InvalidPrivateKey) => success
+        case _ => failure("unexpected case")
+      })
+      .map(_.combineAll)
+  }
+
   test("JwtSigning.asymmetric.rejectPssKeyForRsaAlgorithm") {
     val privateKeys =
       List(
