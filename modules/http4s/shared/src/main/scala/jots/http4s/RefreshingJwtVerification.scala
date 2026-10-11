@@ -80,7 +80,7 @@ import scala.util.control.NoStackTrace
   * the default settings. Notably, logging is no-op by default, so set
   * up logging using [[RefreshingJwtVerificationBuilder#withLogger]].
   */
-trait RefreshingJwtVerification[F[_]] extends JwtVerification[F] {
+sealed trait RefreshingJwtVerification[F[_]] extends JwtVerification[F] {
 
   /**
     * Returns the current set of keys used for verification.

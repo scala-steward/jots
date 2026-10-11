@@ -23,14 +23,14 @@ import jots.crypto.SecretKey
 import jots.testing.literals.*
 
 object syntax {
-  extension (inline signedJwt: SignedJwt) {
+  extension (signedJwt: SignedJwt) {
 
     /**
       * Returns a new [[VerifiedJwt]] from an _unverified_ [[SignedJwt]].
       *
       * Note this is generally unsafe and should only be done in tests.
       */
-    inline def toVerifiedUnsafe: VerifiedJwt =
+    def toVerifiedUnsafe: VerifiedJwt =
       VerifiedJwt.fromVerified(signedJwt)
   }
 
