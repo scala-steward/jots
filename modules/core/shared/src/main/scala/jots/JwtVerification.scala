@@ -340,31 +340,6 @@ object JwtVerification {
         }
       }
 
-    def byKeyId(
-      verifications: Map[JwkKeyId, JwtVerification[G]],
-      unusable: List[(Jwk, JwtException)]
-    ): JwtVerification[G] =
-      new JwtJwkSetVerification[G] {
-        override val unusableKeys: List[(Jwk, JwtException)] =
-          unusable
-
-        override def verify(jwt: SignedJwt): G[VerifiedJwt] =
-          jwt.header.toJsonObject("kid") match {
-            case Some(keyId) =>
-              keyId.asString.map(JwkKeyId.fromString) match {
-                case Some(keyId) =>
-                  verifications.get(keyId) match {
-                    case Some(verification) => verification.verify(jwt)
-                    case None => G.raiseError(new MissingKey())
-                  }
-                case None =>
-                  G.raiseError(new InvalidKeyId())
-              }
-            case None =>
-              G.raiseError(new MissingKeyId())
-          }
-      }
-
     def keyVerification(key: Jwk): F[(JwkKeyId, JwtVerification[G])] =
       key.toJsonObject("alg") match {
         case Some(algorithmJson) =>
@@ -432,7 +407,7 @@ object JwtVerification {
           F.raiseError(new EmptyKeySet(causes))
         } else {
           val verificationByKeyId = verifications.groupMapReduce(_._1)(_._2)(orElseIfRejectedAlgorithm)
-          F.pure(byKeyId(verificationByKeyId, unusable))
+          F.pure(JwtJwkSetVerification.fromKeyVerifications(verificationByKeyId, unusable))
         }
       }
   }

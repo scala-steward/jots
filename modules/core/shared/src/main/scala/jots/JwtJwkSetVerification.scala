@@ -16,11 +16,16 @@
 
 package jots
 
+import cats.ApplicativeThrow
+import jots.JwtException.InvalidKeyId
+import jots.JwtException.MissingKey
+import jots.JwtException.MissingKeyId
+
 /**
   * [[JwtVerification]] using the keys in a [[JwkSet]], created
   * using the `jwkSet` functions on [[JwtVerificationBuilder]].
   */
-trait JwtJwkSetVerification[F[_]] extends JwtVerification[F] {
+sealed trait JwtJwkSetVerification[F[_]] extends JwtVerification[F] {
 
   /**
     * Returns the keys in the [[JwkSet]] that cannot be
@@ -30,4 +35,36 @@ trait JwtJwkSetVerification[F[_]] extends JwtVerification[F] {
     * for signature verification, are excluded here.
     */
   def unusableKeys: List[(Jwk, JwtException)]
+}
+
+object JwtJwkSetVerification {
+
+  /**
+    * Returns a new [[JwtJwkSetVerification]] that verifies tokens
+    * using the verification of the key matching the token key id.
+    */
+  private[jots] def fromKeyVerifications[F[_]](
+    verifications: Map[JwkKeyId, JwtVerification[F]],
+    unusable: List[(Jwk, JwtException)]
+  )(implicit F: ApplicativeThrow[F]): JwtJwkSetVerification[F] =
+    new JwtJwkSetVerification[F] {
+      override val unusableKeys: List[(Jwk, JwtException)] =
+        unusable
+
+      override def verify(jwt: SignedJwt): F[VerifiedJwt] =
+        jwt.header.toJsonObject("kid") match {
+          case Some(keyId) =>
+            keyId.asString.map(JwkKeyId.fromString) match {
+              case Some(keyId) =>
+                verifications.get(keyId) match {
+                  case Some(verification) => verification.verify(jwt)
+                  case None => F.raiseError(new MissingKey())
+                }
+              case None =>
+                F.raiseError(new InvalidKeyId())
+            }
+          case None =>
+            F.raiseError(new MissingKeyId())
+        }
+    }
 }
