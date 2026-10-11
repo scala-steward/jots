@@ -114,7 +114,7 @@ sealed abstract class JwtClaims {
   def mapJsonObject(f: JsonObject => JsonObject): JwtClaims
 
   /**
-    * Returns the header `JsonObject` rendered without spaces in UTF-8.
+    * Returns the claims `JsonObject` rendered without spaces in UTF-8.
     */
   def toByteVector: ByteVector
 

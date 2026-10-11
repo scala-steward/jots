@@ -38,9 +38,9 @@ import jots.internal.KeyRequirement
   * Capability to sign [[JwtBuilder]]s and return [[SignedJwt]]s.
   *
   * Signing [[JwtBuilder]]s requires specifying the algorithm to use
-  * and a [[jots.crypto.PrivateKey]] or [[jots.crypto.SecretKey]]. A
-  * minimum private and secret key length is enforced by default, but
-  * this can be customized using [[JwtSigningBuilder]].
+  * and a [[jots.crypto.PrivateKey]] or [[jots.crypto.SecretKey]]. The
+  * key requirements of the algorithm are checked by default, but this
+  * can be customized using [[JwtSigningBuilder]].
   *
   * The default [[JwtSigning]] instances will set the algorithm in
   * the header of the [[JwtBuilder]] before signing, to ensure it

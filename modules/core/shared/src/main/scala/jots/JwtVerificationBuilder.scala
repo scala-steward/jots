@@ -260,7 +260,7 @@ sealed abstract class JwtVerificationBuilder[F[_], G[_]] {
     * - every listed header name must be one of these headers, and also
     * - every listed header name must be present in the header.
     *
-    * Intepreting the semantics of the headers are left to the application.
+    * Interpreting the semantics of the headers is left to the application.
     *
     * Default: `List.empty` meaning any token with a `crit` header is rejected.
     */
@@ -284,6 +284,10 @@ sealed abstract class JwtVerificationBuilder[F[_], G[_]] {
 }
 
 object JwtVerificationBuilder {
+
+  /**
+    * Create [[JwtVerificationBuilder]] instances with the specified type.
+    */
   def default[F[_]]: JwtVerificationBuilderDefault[F, F] =
     new JwtVerificationBuilderDefault[F, F] {}
 

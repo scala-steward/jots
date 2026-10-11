@@ -94,7 +94,7 @@ object JwtAlgorithm {
 sealed abstract class JwtHmacAlgorithm extends JwtAlgorithm {
 
   /**
-    * Returns the cryptograhic hash algorithm being used.
+    * Returns the cryptographic hash algorithm being used.
     */
   def hashAlgorithm: HashAlgorithm
 
@@ -154,7 +154,7 @@ private[jots] object JwtHmacAlgorithms {
 sealed abstract class JwtAsymmetricAlgorithm extends JwtAlgorithm {
 
   /**
-    * Returns the cryptograhic asymmetric algorithm being used.
+    * Returns the cryptographic asymmetric algorithm being used.
     */
   def asymmetricAlgorithm: AsymmetricAlgorithm
 
