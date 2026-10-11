@@ -357,7 +357,7 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     val key = Json.obj("kid" -> "key-1".asJson)
     val result =
       RefreshingJwtVerification.decoderSkipInvalidKeys.decodeJson(Json.obj("keys" -> Json.arr(key)))
-    expect(result.exists { case (keys, skipped) => keys.isEmpty && skipped.map(_._1) == List(key) })
+    expect(result.exists { case (keys, unusable) => keys.isEmpty && unusable.map(_._1) == List(key) })
   }
 
   pureTest("RefreshingJwtVerification.decoderSkipInvalidKeys.rejectNested") {

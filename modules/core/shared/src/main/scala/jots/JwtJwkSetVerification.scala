@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-package jots.internal
-
-import jots.Jwk
-import jots.JwtException
+package jots
 
 /**
-  * Keys in a [[jots.JwkSet]] which were skipped, together with the
-  * reason, since they could not be used for signature verification.
-  *
-  * Note the http4s module depends on this trait, so it must keep
-  * binary compatibility, even though it is package-private.
+  * [[JwtVerification]] using the keys in a [[JwkSet]], created
+  * using the `jwkSet` functions on [[JwtVerificationBuilder]].
   */
-private[jots] trait SkippedKeys {
-  def skippedKeys: List[(Jwk, JwtException)]
+trait JwtJwkSetVerification[F[_]] extends JwtVerification[F] {
+
+  /**
+    * Returns the keys in the [[JwkSet]] that cannot be
+    * used for verification, together with the reason.
+    *
+    * Note keys without a key id (kid), or not meant
+    * for signature verification, are excluded here.
+    */
+  def unusableKeys: List[(Jwk, JwtException)]
 }

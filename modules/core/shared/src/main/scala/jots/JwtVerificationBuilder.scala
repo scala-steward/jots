@@ -405,7 +405,8 @@ object JwtVerificationBuilder {
       * selected by key id, or when its `use` or `key_ops` parameters
       * indicate it is not meant for signature verification. Keys
       * which are not supported, or have no accepted algorithm, are
-      * also excluded.
+      * also excluded, and returned by `unusableKeys` on the built
+      * [[JwtJwkSetVerification]].
       */
     def jwkSet(
       algorithm: JwtAlgorithm,
@@ -428,7 +429,8 @@ object JwtVerificationBuilder {
       * selected by key id, or when its `use` or `key_ops` parameters
       * indicate it is not meant for signature verification. Keys
       * which are not supported, or have no accepted algorithm, are
-      * also excluded.
+      * also excluded, and returned by `unusableKeys` on the built
+      * [[JwtJwkSetVerification]].
       */
     def jwkSet(
       algorithms: NonEmptyList[JwtAlgorithm],
