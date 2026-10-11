@@ -120,13 +120,24 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
 
   test("RefreshingJwtVerification.jwkSet.rejectKeyAlgorithm") {
     for {
+      signed <- sign("key-1")
       testClient <- TestClient(keysResponse(keySet))
       algorithms = NonEmptyList.of(JwtAlgorithm.HS384)
       result <- jwkSetBuilder(algorithms, testClient.client, uri)
         .withRetryPolicy(noRetries)
         .build
-        .use(_.keys.attempt)
-      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.EmptyKeySet) => () }
+        .use(verification => (verification.keys.attempt, verification.verify(signed).attempt).tupled)
+      (keys, verified) = result
+      _ <- matchOrFailFast[IO](keys) {
+        case Left(e: RefreshingJwtVerification.UnavailableKeySet)
+          if e.getCause.isInstanceOf[JwtException.EmptyKeySet] =>
+          ()
+      }
+      _ <- matchOrFailFast[IO](verified) {
+        case Left(e: RefreshingJwtVerification.UnavailableKeySet)
+          if e.getCause.isInstanceOf[JwtException.EmptyKeySet] =>
+          ()
+      }
     } yield success
   }
 
@@ -264,8 +275,12 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
         (verification.keys.attempt, verification.verify(signed).attempt).tupled
       }
       (keys, verified) = result
-      _ <- matchOrFailFast[IO](keys) { case Left(`error`) => () }
-      _ <- matchOrFailFast[IO](verified) { case Left(`error`) => () }
+      _ <- matchOrFailFast[IO](keys) {
+        case Left(e: RefreshingJwtVerification.UnavailableKeySet) if e.getCause eq error => ()
+      }
+      _ <- matchOrFailFast[IO](verified) {
+        case Left(e: RefreshingJwtVerification.UnavailableKeySet) if e.getCause eq error => ()
+      }
     } yield success
   }
 
@@ -273,7 +288,11 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     for {
       testClient <- TestClient(errorResponse)
       result <- builder(testClient.client).build.use(_.keys.attempt)
-      _ <- matchOrFailFast[IO](result) { case Left(_: UnexpectedStatus) => () }
+      _ <- matchOrFailFast[IO](result) {
+        case Left(e: RefreshingJwtVerification.UnavailableKeySet)
+          if e.getCause.isInstanceOf[UnexpectedStatus] =>
+          ()
+      }
     } yield success
   }
 
@@ -281,7 +300,10 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     for {
       testClient <- TestClient(invalidKeysResponse)
       result <- builder(testClient.client).build.use(_.keys.attempt)
-      _ <- matchOrFailFast[IO](result) { case Left(_: DecodeFailure) => () }
+      _ <- matchOrFailFast[IO](result) {
+        case Left(e: RefreshingJwtVerification.UnavailableKeySet) if e.getCause.isInstanceOf[DecodeFailure] =>
+          ()
+      }
     } yield success
   }
 
@@ -290,7 +312,9 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
       testClient <- TestClient(jsonResponse("""{"d":"secret"}"""))
       result <- builder(testClient.client).build.use(_.keys.attempt)
       _ <- matchOrFailFast[IO](result) {
-        case Left(failure: DecodeFailure) if !failure.getMessage.contains("secret") => ()
+        case Left(e: RefreshingJwtVerification.UnavailableKeySet)
+          if e.getCause.isInstanceOf[DecodeFailure] && !e.getCause.getMessage.contains("secret") =>
+          ()
       }
     } yield success
   }
