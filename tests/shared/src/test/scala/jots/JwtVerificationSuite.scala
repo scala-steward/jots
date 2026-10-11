@@ -21,18 +21,22 @@ import cats.effect.IO
 import cats.syntax.all.*
 import io.circe.Json
 import io.circe.JsonNumber
+import io.circe.JsonObject
 import io.circe.syntax.*
 import java.nio.charset.StandardCharsets.UTF_8
 import jots.crypto.PublicKey
 import jots.crypto.SecretKey
 import jots.internal.asn1.Asn1
 import jots.internal.asn1.Oid
+import jots.testing.ed448PublicKeyGen
+import jots.testing.rsaInsecurePublicKeyGen
 import jots.testing.syntax.*
 import scala.concurrent.duration.*
 import scodec.bits.ByteVector
 import weaver.SimpleIOSuite
+import weaver.scalacheck.Checkers
 
-object JwtVerificationSuite extends SimpleIOSuite {
+object JwtVerificationSuite extends SimpleIOSuite with Checkers {
   test("JwtVerification.rejectSignature") {
     val invalidSignature: JwtSignature =
       JwtSignature(ByteVector.view("invalidSignature".getBytes(UTF_8)))
@@ -55,6 +59,39 @@ object JwtVerificationSuite extends SimpleIOSuite {
       .traverse { example =>
         example.verifiedJwt
           .map(verifiedJwt => expect.eql(example.signedJwt, verifiedJwt.toSigned))
+      }
+      .map(_.combineAll)
+  }
+
+  test("JwtVerification.decode") {
+    ExampleJwt.All
+      .traverse { example =>
+        for {
+          verification <- example.verification
+          verifiedJwt <- verification.decode(example.show)
+        } yield expect.eql(example.signedJwt, verifiedJwt.toSigned)
+      }
+      .map(_.combineAll)
+  }
+
+  test("JwtVerification.decode.rejectInvalidToken") {
+    for {
+      verification <- ExampleHmacJwt.HS256.verification
+      result <- verification.decode("not-a-token").attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidSignedJwt) => () }
+    } yield success
+  }
+
+  test("JwtVerification.decodeAs") {
+    implicit val decoder: JwtDecoder[JsonObject] =
+      JwtDecoder.decodeClaims[JsonObject]
+
+    ExampleJwt.All
+      .traverse { example =>
+        for {
+          verification <- example.verification
+          claims <- verification.decodeAs[JsonObject](example.show)
+        } yield expect.eql(example.signedJwt.claims.toJsonObject, claims)
       }
       .map(_.combineAll)
   }
@@ -899,6 +936,60 @@ object JwtVerificationSuite extends SimpleIOSuite {
     for {
       result <- JwtVerificationBuilder.default[IO].ecdsa(JwtEcdsaAlgorithm.ES256, publicKey).build.attempt
       _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidEcKeyLength) => () }
+    } yield success
+  }
+
+  test("JwtVerification.rejectMismatchedEddsaCurve") {
+    forall(ed448PublicKeyGen) { publicKey =>
+      for {
+        result <- JwtVerificationBuilder.default[IO].eddsa(JwtEddsaAlgorithm.Ed25519, publicKey).build.attempt
+        _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidEddsaKeyLength) => () }
+      } yield success
+    }
+  }
+
+  test("JwtVerification.rejectInsecureRsaKey") {
+    forall(rsaInsecurePublicKeyGen) { publicKey =>
+      for {
+        result <- JwtVerificationBuilder.default[IO].rsa(JwtRsaAlgorithm.RS256, publicKey).build.attempt
+        _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidRsaKeyLength) => () }
+      } yield success
+    }
+  }
+
+  test("JwtVerification.hmac.rejectShortSecretKey") {
+    for {
+      result <- JwtVerificationBuilder
+        .default[IO]
+        .hmac(JwtHmacAlgorithm.HS256, secretKey"too-short-secret")
+        .build
+        .attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidSecretKeyLength) => () }
+    } yield success
+  }
+
+  test("JwtVerification.hmac.rejectShortSecretKeyForAnyAlgorithm") {
+    val algorithms = NonEmptyList.of(JwtHmacAlgorithm.HS256, JwtHmacAlgorithm.HS384)
+
+    for {
+      result <- JwtVerificationBuilder.default[IO].hmac(algorithms, secretKey).build.attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: JwtException.InvalidSecretKeyLength) => () }
+    } yield success
+  }
+
+  test("JwtVerification.hmac.acceptAlgorithms") {
+    val algorithms = NonEmptyList.of(JwtHmacAlgorithm.HS256, JwtHmacAlgorithm.HS384)
+    val longSecretKey = secretKey"a-string-secret-that-is-at-least-384-bits-long-too"
+
+    for {
+      verification <- JwtVerificationBuilder.default[IO].hmac(algorithms, longSecretKey).build
+      _ <- algorithms.traverse_ { algorithm =>
+        for {
+          signing <- JwtSigningBuilder.default[IO].hmac(algorithm, longSecretKey).build
+          signed <- JwtBuilder.default.signWith(signing)
+          _ <- signed.verifyWith(verification)
+        } yield ()
+      }
     } yield success
   }
 

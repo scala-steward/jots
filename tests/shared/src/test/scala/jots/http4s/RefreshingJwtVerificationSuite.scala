@@ -266,6 +266,40 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield expect.eql(keySet, keys)
   }
 
+  test("RefreshingJwtVerification.defaultSettings") {
+    TestClient(keysResponse(keySet)).map { testClient =>
+      val builder =
+        RefreshingJwtVerificationBuilder.refreshWith[IO](testClient.client, uri)(_ => IO.pure(rejectAll))
+
+      expect.eql(60.minutes, builder.refreshInterval) &&
+      expect.eql(60.seconds, builder.refreshIntervalOnError) &&
+      expect.eql(60.seconds, builder.minRefreshIntervalOnMissingKey) &&
+      expect(builder.maxKeyAge == Duration.Inf) &&
+      expect(builder.requireHttps)
+    }
+  }
+
+  test("RefreshingJwtVerification.rejectNonPositiveDurations") {
+    TestClient(keysResponse(keySet)).map { testClient =>
+      val builder =
+        RefreshingJwtVerificationBuilder.refreshWith[IO](testClient.client, uri)(_ => IO.pure(rejectAll))
+
+      val setters: List[FiniteDuration => RefreshingJwtVerificationBuilder[IO]] =
+        List(
+          builder.withRefreshInterval,
+          builder.withRefreshIntervalOnError,
+          builder.withMinRefreshIntervalOnMissingKey,
+          builder.withMaxKeyAge
+        )
+
+      setters.flatMap { setter =>
+        List(Duration.Zero, -1.second).map { duration =>
+          expect(Either.catchNonFatal(setter(duration)).swap.exists(_.isInstanceOf[IllegalArgumentException]))
+        }
+      }.combineAll
+    }
+  }
+
   test("RefreshingJwtVerification.surfaceInitialError") {
     val error = new RuntimeException("the key set could not be fetched")
     for {

@@ -17,6 +17,7 @@
 package jots
 
 import cats.Show
+import cats.data.NonEmptyList
 import cats.kernel.laws.discipline.HashTests
 import cats.syntax.all.*
 import io.circe.JsonObject
@@ -41,6 +42,25 @@ object JwtHeaderSuite extends SimpleIOSuite with Checkers with Discipline {
     forall { (claims: JwtHeader) =>
       expect.eql(Show[JwtHeader].show(claims), claims.show) &&
       expect.eql(claims.show, claims.toBase64UrlNoPad)
+    }
+  }
+
+  test("JwtHeader.addOption") {
+    forall { (header: JwtHeader, name: String, value: String) =>
+      val added = header.add(name, value.asJson)
+      expect.eql(added, header.addOption(name, Some(value.asJson))) &&
+      expect.eql(added.remove(name), added.addOption(name, None))
+    }
+  }
+
+  test("JwtHeader.withCriticalHeaders") {
+    forall { (header: JwtHeader, criticalHeader: String, criticalHeaders: List[String]) =>
+      val nonEmpty = NonEmptyList(criticalHeader, criticalHeaders)
+      expect.eql(Some(nonEmpty.asJson), header.withCriticalHeaders(nonEmpty).toJsonObject("crit")) &&
+      expect.eql(
+        header.withCriticalHeaders(nonEmpty),
+        header.withCriticalHeaders(criticalHeader, criticalHeaders: _*)
+      )
     }
   }
 
