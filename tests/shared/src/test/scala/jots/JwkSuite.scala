@@ -78,6 +78,14 @@ object JwkSuite extends SimpleIOSuite with Checkers with Discipline {
     expect(jwk.toPublicJwk.isLeft)
   }
 
+  test("Jwk.toPrivateKey.rejectOtherPrimes") {
+    forall(jwkRsaKeyPairGen) { case (privateKey, _) =>
+      val otherPrimes = Json.arr(Json.obj("r" -> "AQAB".asJson, "d" -> "AQAB".asJson, "t" -> "AQAB".asJson))
+      val otherPrimesKey = Jwk.fromJsonObject(privateKey.toJsonObject.add("oth", otherPrimes))
+      expect(otherPrimesKey.flatMap(_.toPrivateKey).isLeft)
+    }
+  }
+
   pureTest("Jwk.fromString.rejectNested") {
     expect(Jwk.fromString(s"""{"kty":"oct","nested":${"[" * 1000}${"]" * 1000}}""").isLeft)
   }

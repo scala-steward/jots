@@ -417,17 +417,19 @@ private[jots] object JwkOkp {
 
 private[jots] object JwkRsa {
   def toPrivateKey(jsonObject: JsonObject): Either[InvalidPrivateKey, PrivateKey] =
-    for {
-      n <- Jwk.base64UrlNoPad(jsonObject, "n").leftMap(new InvalidPrivateKey(_))
-      e <- Jwk.base64UrlNoPad(jsonObject, "e").leftMap(new InvalidPrivateKey(_))
-      d <- Jwk.base64UrlNoPad(jsonObject, "d").leftMap(new InvalidPrivateKey(_))
-      p <- Jwk.base64UrlNoPad(jsonObject, "p").leftMap(new InvalidPrivateKey(_))
-      q <- Jwk.base64UrlNoPad(jsonObject, "q").leftMap(new InvalidPrivateKey(_))
-      dp <- Jwk.base64UrlNoPad(jsonObject, "dp").leftMap(new InvalidPrivateKey(_))
-      dq <- Jwk.base64UrlNoPad(jsonObject, "dq").leftMap(new InvalidPrivateKey(_))
-      qi <- Jwk.base64UrlNoPad(jsonObject, "qi").leftMap(new InvalidPrivateKey(_))
-      privateKey = encodePrivateKey(n, e, d, p, q, dp, dq, qi)
-    } yield privateKey
+    if (jsonObject.contains("oth")) Left(new InvalidPrivateKey("unsupported other primes info (oth)"))
+    else
+      for {
+        n <- Jwk.base64UrlNoPad(jsonObject, "n").leftMap(new InvalidPrivateKey(_))
+        e <- Jwk.base64UrlNoPad(jsonObject, "e").leftMap(new InvalidPrivateKey(_))
+        d <- Jwk.base64UrlNoPad(jsonObject, "d").leftMap(new InvalidPrivateKey(_))
+        p <- Jwk.base64UrlNoPad(jsonObject, "p").leftMap(new InvalidPrivateKey(_))
+        q <- Jwk.base64UrlNoPad(jsonObject, "q").leftMap(new InvalidPrivateKey(_))
+        dp <- Jwk.base64UrlNoPad(jsonObject, "dp").leftMap(new InvalidPrivateKey(_))
+        dq <- Jwk.base64UrlNoPad(jsonObject, "dq").leftMap(new InvalidPrivateKey(_))
+        qi <- Jwk.base64UrlNoPad(jsonObject, "qi").leftMap(new InvalidPrivateKey(_))
+        privateKey = encodePrivateKey(n, e, d, p, q, dp, dq, qi)
+      } yield privateKey
 
   def toPublicKey(jsonObject: JsonObject): Either[InvalidPublicKey, PublicKey] =
     for {
