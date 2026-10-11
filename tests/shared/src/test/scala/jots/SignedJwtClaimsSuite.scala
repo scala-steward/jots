@@ -33,6 +33,14 @@ object SignedJwtClaimsSuite extends SimpleIOSuite with Checkers with Discipline 
     }
   }
 
+  test("SignedJwtClaims.fromBase64UrlNoPad.rejectNonBase64UrlCharacters") {
+    forall { (claims: SignedJwtClaims) =>
+      val encoded = claims.toBase64UrlNoPad
+      expect(SignedJwtClaims.fromBase64UrlNoPad(' ' +: encoded).isLeft) &&
+      expect(SignedJwtClaims.fromBase64UrlNoPad(encoded :+ '\u0000').isLeft)
+    }
+  }
+
   test("SignedJwtClaims.show") {
     forall { (claims: SignedJwtClaims) =>
       expect.eql(Show[SignedJwtClaims].show(claims), claims.show) &&

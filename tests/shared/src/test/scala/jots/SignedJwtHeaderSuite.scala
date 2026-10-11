@@ -33,6 +33,14 @@ object SignedJwtHeaderSuite extends SimpleIOSuite with Checkers with Discipline 
     }
   }
 
+  test("SignedJwtHeader.fromBase64UrlNoPad.rejectNonBase64UrlCharacters") {
+    forall { (header: SignedJwtHeader) =>
+      val encoded = header.toBase64UrlNoPad
+      expect(SignedJwtHeader.fromBase64UrlNoPad(' ' +: encoded).isLeft) &&
+      expect(SignedJwtHeader.fromBase64UrlNoPad(encoded :+ '\u0000').isLeft)
+    }
+  }
+
   test("SignedJwtHeader.show") {
     forall { (header: SignedJwtHeader) =>
       expect.eql(Show[SignedJwtHeader].show(header), header.show) &&
