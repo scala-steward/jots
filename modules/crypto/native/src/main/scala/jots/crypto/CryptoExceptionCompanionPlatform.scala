@@ -17,16 +17,16 @@
 package jots.crypto
 
 private[crypto] trait CryptoExceptionCompanionPlatform {
-  final class EcdsaFieldSizeMismatch(fieldSize: Int, rBytes: Int, sBytes: Int)
+  private[crypto] final class EcdsaFieldSizeMismatch(fieldSize: Int, rBytes: Int, sBytes: Int)
     extends CryptoException(
       s"ECDSA signature components do not fit in field size $fieldSize bytes " +
         s"(r=$rBytes bytes, s=$sBytes bytes): curve and algorithm do not match"
     )
 
-  final class OpensslError(functionName: String, reason: String)
+  private[crypto] final class OpensslError(functionName: String, reason: String)
     extends CryptoException(s"$functionName failed: $reason")
 
-  final class WrongKeyType(
+  private[crypto] final class WrongKeyType(
     keyBaseId: Int,
     expectedKeyBaseId: Int,
     algorithm: AsymmetricAlgorithm

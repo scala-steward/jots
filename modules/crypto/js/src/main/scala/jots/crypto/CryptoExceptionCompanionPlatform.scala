@@ -17,7 +17,7 @@
 package jots.crypto
 
 private[crypto] trait CryptoExceptionCompanionPlatform {
-  final class WrongKeyType(
+  private[crypto] final class WrongKeyType(
     keyType: String,
     expectedKeyType: String,
     algorithm: AsymmetricAlgorithm
