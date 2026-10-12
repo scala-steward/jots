@@ -35,7 +35,7 @@ val signedJwtFromRequest: Option[SignedJwt] =
 
 ## Auth Middleware
 
-The `JwtAuthMiddleware` can be used to create `AuthMiddleware` for servers to parse, verify and decode tokens from incoming `Authorization: Bearer <token>` request headers. If the authentication fails, or if no token is provided, a `401 Unauthorized` response is sent along with a `WWW-Authenticate` header detailing the issue.
+The `JwtAuthMiddleware` can be used to create `AuthMiddleware` for servers to parse, verify and decode tokens from incoming `Authorization: Bearer <token>` request headers. If the token is missing or invalid, a `401 Unauthorized` response is sent along with a `WWW-Authenticate` header detailing the issue.
 
 ```scala mdoc:silent
 import cats.syntax.all.*
@@ -74,6 +74,8 @@ We should take care to _not_ put secrets, like `SecretKey`, in source code.
 @:@
 
 Note the middleware protects every incoming request, so public routes should be combined before the authenticated routes. This normally looks something along the lines of: `publicRoutes <+> authMiddleware(authedRoutes)`. In case it is not done correctly, public routes will always get a `401 Unauthorized` without a token present.
+
+Tokens are rejected when verification raises a `JwtException`, or when decoding fails with a `DecodingFailure`. Other errors are raised as normal, so the server's error handling applies (`500 Internal Server Error` by default). Custom verifications can raise a `JwtException` to have the middleware respond with a `401 Unauthorized`.
 
 ## Refreshing Verification
 

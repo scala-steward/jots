@@ -51,6 +51,11 @@ object JwtAuthMiddleware {
     * Requests with a missing or invalid token will receive
     * a 401 Unauthorized response with a `WWW-Authenticate`
     * header set detailing the issue.
+    *
+    * Tokens are considered invalid when either verification
+    * raises a `JwtException`, or if the subsequent decoding
+    * of the token fails with a `DecodingFailure`. Any other
+    * errors are raised like normal errors.
     */
   def apply[F[_]: MonadThrow, A: JwtDecoder](
     verification: JwtVerification[F]

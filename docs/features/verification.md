@@ -288,18 +288,20 @@ It is not possible to disable signature verification for the default `JwtVerific
 
 ### Custom Example
 
-Following is an example of a custom verification that requires the `nonce` header key to be present.
+Following is an example of a custom verification that requires the `nonce` header key to be present. Tokens without a nonce are rejected with a custom `JwtException`, so that, for example, the [http4s middleware](../integrations/http4s.md#auth-middleware) rejects the token and responds with a `401 Unauthorized` response.
 
 ```scala mdoc:silent
+import jots.JwtException
+
+final case class MissingNonce() extends JwtException("token is missing nonce")
+
 val jwtNonceVerification: SyncIO[JwtVerification[SyncIO]] =
   jwtVerification.map { verification =>
     JwtVerification.verifyWith { jwt =>
       for {
         verifiedJwt <- verification.verify(jwt)
         nonce = verifiedJwt.header.toJsonObject("nonce")
-        _ <- if (nonce.nonEmpty) SyncIO.unit else SyncIO.raiseError(
-          new IllegalArgumentException("token is missing nonce")
-        )
+        _ <- if (nonce.nonEmpty) SyncIO.unit else SyncIO.raiseError(MissingNonce())
       } yield verifiedJwt
     }
   }
