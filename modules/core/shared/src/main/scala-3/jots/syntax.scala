@@ -19,8 +19,8 @@ package jots
 import jots.literals.*
 
 object syntax {
-  extension [A](inline a: A) {
-    inline def asJwt(using JwtEncoder[A]): JwtBuilder =
+  extension [A](a: A) {
+    def asJwt(using JwtEncoder[A]): JwtBuilder =
       JwtEncoder[A].encode(a)
   }
 
