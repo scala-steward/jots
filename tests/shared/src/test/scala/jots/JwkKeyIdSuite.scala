@@ -18,6 +18,7 @@ package jots
 
 import cats.Show
 import cats.kernel.laws.discipline.HashTests
+import cats.kernel.laws.discipline.OrderTests
 import io.circe.syntax.*
 import jots.testing.*
 import weaver.SimpleIOSuite
@@ -32,6 +33,8 @@ object JwkKeyIdSuite extends SimpleIOSuite with Checkers with Discipline {
   }
 
   checkAll("JwkKeyId.hash", HashTests[JwkKeyId].hash)
+
+  checkAll("JwkKeyId.order", OrderTests[JwkKeyId].order)
 
   test("JwkKeyId.show") {
     forall { (keyId: JwkKeyId) =>

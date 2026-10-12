@@ -17,6 +17,7 @@
 package jots
 
 import cats.Hash
+import cats.Order
 import cats.Show
 import cats.data.NonEmptyList
 import cats.data.NonEmptyMap
@@ -94,8 +95,14 @@ object JwkKeyType {
   def unapply(keyType: JwkKeyType): Some[String] =
     Some(keyType.name)
 
-  implicit val jwkKeyTypeHash: Hash[JwkKeyType] =
-    Hash.fromUniversalHashCode
+  implicit val jwkKeyTypeOrder: Order[JwkKeyType] with Hash[JwkKeyType] =
+    new Order[JwkKeyType] with Hash[JwkKeyType] {
+      override def compare(x: JwkKeyType, y: JwkKeyType): Int =
+        x.name.compareTo(y.name)
+
+      override def hash(x: JwkKeyType): Int =
+        x.hashCode
+    }
 
   implicit val jwkKeyTypeShow: Show[JwkKeyType] =
     Show.show(_.show)

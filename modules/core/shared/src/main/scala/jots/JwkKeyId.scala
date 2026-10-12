@@ -17,6 +17,7 @@
 package jots
 
 import cats.Hash
+import cats.Order
 import cats.Show
 import io.circe.Decoder
 import io.circe.Encoder
@@ -66,8 +67,14 @@ object JwkKeyId {
   implicit val jwkKeyIdEncoder: Encoder[JwkKeyId] =
     Encoder[String].contramap(_.value)
 
-  implicit val jwkKeyIdHash: Hash[JwkKeyId] =
-    Hash.fromUniversalHashCode
+  implicit val jwkKeyIdOrder: Order[JwkKeyId] with Hash[JwkKeyId] =
+    new Order[JwkKeyId] with Hash[JwkKeyId] {
+      override def compare(x: JwkKeyId, y: JwkKeyId): Int =
+        x.value.compareTo(y.value)
+
+      override def hash(x: JwkKeyId): Int =
+        x.hashCode
+    }
 
   implicit val jwkKeyIdShow: Show[JwkKeyId] =
     Show.show(_.show)
