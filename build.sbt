@@ -45,12 +45,12 @@ inThisBuild(
     tlJdkRelease := Some(8),
     tlSitePublishBranch := Some("main"),
     versionScheme := Some("early-semver"),
+    mimaReportSignatureProblems := true,
     mimaBinaryIssueFilters ++= {
       import com.typesafe.tools.mima.core._
       Seq(
         ProblemFilters.exclude[Problem]("jots.internal.*"),
-        ProblemFilters.exclude[Problem]("jots.crypto.internal.*"),
-        ProblemFilters.exclude[Problem]("jots.testing.internal.*")
+        ProblemFilters.exclude[Problem]("jots.crypto.internal.*")
       )
     }
   )
