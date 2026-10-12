@@ -16,6 +16,7 @@
 
 package jots.http4s
 
+import cats.effect.Concurrent
 import cats.effect.Deferred
 import cats.effect.Outcome
 import cats.effect.Ref
@@ -23,6 +24,8 @@ import cats.effect.Resource
 import cats.effect.Temporal
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
+import fs2.Chunk
+import fs2.Stream
 import io.circe.Decoder
 import io.circe.DecodingFailure
 import io.circe.Json
@@ -34,7 +37,11 @@ import jots.JwtJwkSetVerification
 import jots.JwtVerification
 import jots.SignedJwt
 import jots.VerifiedJwt
+import org.http4s.DecodeResult
 import org.http4s.EntityDecoder
+import org.http4s.InvalidMessageBodyFailure
+import org.http4s.Media
+import org.http4s.MediaRange
 import org.http4s.MediaType
 import org.http4s.Uri
 import org.http4s.circe.jsonOfWithSensitiveMedia
@@ -126,10 +133,13 @@ object RefreshingJwtVerification {
       implicit val decoder: Decoder[(JwkSet, List[(Json, DecodingFailure)])] =
         decoderSkipInvalidKeys
 
-      jsonOfWithSensitiveMedia(
-        _ => "<redacted>",
-        MediaType.application.json,
-        MediaType.application.`jwk-set+json`
+      limitResponseSize(
+        jsonOfWithSensitiveMedia(
+          _ => "<redacted>",
+          MediaType.application.json,
+          MediaType.application.`jwk-set+json`
+        ),
+        maxResponseSize
       )
     }
 
@@ -321,6 +331,33 @@ object RefreshingJwtVerification {
         }
     }
   }
+
+  private def limitResponseSize[F[_], A](
+    decoder: EntityDecoder[F, A],
+    maxResponseSize: Long
+  )(implicit F: Concurrent[F]): EntityDecoder[F, A] =
+    new EntityDecoder[F, A] {
+      override def decode(media: Media[F], strict: Boolean): DecodeResult[F, A] = {
+        val body: F[Option[Chunk[Byte]]] =
+          if (media.contentLength.exists(_ > maxResponseSize)) F.pure(None)
+          else
+            media.body
+              .take(maxResponseSize + 1)
+              .compile
+              .to(Chunk)
+              .map(body => if (body.size > maxResponseSize) None else Some(body))
+
+        DecodeResult(body.flatMap {
+          case Some(body) =>
+            decoder.decode(Media(Stream.chunk(body), media.headers), strict).value
+          case None =>
+            F.pure(Left(InvalidMessageBodyFailure(s"the response is larger than $maxResponseSize bytes")))
+        })
+      }
+
+      override def consumes: Set[MediaRange] =
+        decoder.consumes
+    }
 
   private[http4s] val decoderSkipInvalidKeys: Decoder[(JwkSet, List[(Json, DecodingFailure)])] = {
     val decoder =

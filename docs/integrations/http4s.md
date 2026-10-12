@@ -144,6 +144,7 @@ The `RefreshingJwtVerificationBuilder` can be used to customize the following de
 - Missing keys cause an extra refresh at most every 60 seconds (`minRefreshIntervalOnMissingKey`).
 - Retries with a jittered exponential backoff, up to 4 retries and max 5 seconds between (`retryPolicy`).
 - The `Uri` for the key set must use HTTPS, except for loopback hosts like `localhost` (`requireHttps`).
+- Key set responses larger than 512 KiB are rejected (the `maxResponseSize` setting).
 - Logging is no-op by default; a custom `Logger` can be provided using the `withLogger` function.
 
 Following is an example of how to customize the default settings.
