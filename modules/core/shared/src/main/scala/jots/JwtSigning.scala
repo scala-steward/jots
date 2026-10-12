@@ -16,8 +16,6 @@
 
 package jots
 
-import cats.ApplicativeThrow
-import cats.Functor
 import cats.MonadThrow
 import cats.data.NonEmptyList
 import cats.syntax.all.*
@@ -80,7 +78,7 @@ object JwtSigning {
 
   private[jots] def fromAsymmetricBuilder[F[_], G[_]](
     builder: JwtAsymmetricSigningBuilder[F, G]
-  )(implicit F: ApplicativeThrow[F], G: Functor[G], crypto: Crypto[G]): F[JwtSigning[G]] = {
+  )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): F[JwtSigning[G]] = {
     import builder.*
 
     val ensureKeyAlgorithm: F[Unit] =
@@ -102,7 +100,7 @@ object JwtSigning {
               new InvalidPrivateKey(s"$keyType keys cannot be used with [${algorithm.name}]")
             )
           case keyLength =>
-            KeyRequirement.check(algorithm.keyRequirement, keyLength)
+            KeyRequirement.check[F](algorithm.keyRequirement, keyLength)
         }
       }
 
@@ -122,7 +120,7 @@ object JwtSigning {
 
   private[jots] def fromHmacBuilder[F[_], G[_]](
     builder: JwtHmacSigningBuilder[F, G]
-  )(implicit F: ApplicativeThrow[F], G: Functor[G], crypto: Crypto[G]): F[JwtSigning[G]] = {
+  )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): F[JwtSigning[G]] = {
     import builder.*
 
     val ensureMinKeyLength: F[Unit] =
@@ -150,7 +148,7 @@ object JwtSigning {
 
   private[jots] def fromJwkBuilder[F[_], G[_]](
     builder: JwtJwkSigningBuilder[F, G]
-  )(implicit F: MonadThrow[F], G: Functor[G], crypto: Crypto[G]): F[JwtSigning[G]] = {
+  )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): F[JwtSigning[G]] = {
     import builder.*
 
     def signing(keyId: Option[JwkKeyId], algorithm: JwtAlgorithm): F[JwtSigning[G]] = {

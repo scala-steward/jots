@@ -16,8 +16,6 @@
 
 package jots
 
-import cats.ApplicativeThrow
-import cats.Functor
 import cats.MonadThrow
 import jots.crypto.Crypto
 import jots.crypto.PrivateKey
@@ -71,7 +69,7 @@ object JwtSigningBuilder {
     private[jots] def asymmetric(
       algorithm: JwtAsymmetricAlgorithm,
       privateKey: PrivateKey
-    )(implicit F: ApplicativeThrow[F], G: Functor[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
+    )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
       JwtAsymmetricSigningBuilder.default(algorithm, privateKey)
 
     /**
@@ -81,7 +79,7 @@ object JwtSigningBuilder {
     def ecdsa(
       algorithm: JwtEcdsaAlgorithm,
       privateKey: PrivateKey
-    )(implicit F: ApplicativeThrow[F], G: Functor[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
+    )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
       asymmetric(algorithm, privateKey)
 
     /**
@@ -91,7 +89,7 @@ object JwtSigningBuilder {
     def eddsa(
       algorithm: JwtEddsaAlgorithm,
       privateKey: PrivateKey
-    )(implicit F: ApplicativeThrow[F], G: Functor[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
+    )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
       asymmetric(algorithm, privateKey)
 
     /**
@@ -101,7 +99,7 @@ object JwtSigningBuilder {
     def hmac(
       algorithm: JwtHmacAlgorithm,
       secretKey: SecretKey
-    )(implicit F: ApplicativeThrow[F], G: Functor[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
+    )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
       JwtHmacSigningBuilder.default(algorithm, secretKey)
 
     /**
@@ -111,7 +109,7 @@ object JwtSigningBuilder {
     def jwk(
       algorithm: JwtAlgorithm,
       key: Jwk
-    )(implicit F: MonadThrow[F], G: Functor[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
+    )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
       JwtJwkSigningBuilder.default(algorithm, key)
 
     /**
@@ -121,7 +119,7 @@ object JwtSigningBuilder {
     def rsa(
       algorithm: JwtRsaAlgorithm,
       privateKey: PrivateKey
-    )(implicit F: ApplicativeThrow[F], G: Functor[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
+    )(implicit F: MonadThrow[F], G: MonadThrow[G], crypto: Crypto[G]): JwtSigningBuilder[F, G] =
       asymmetric(algorithm, privateKey)
 
     /**
@@ -132,7 +130,7 @@ object JwtSigningBuilder {
   }
 }
 
-private[jots] final case class JwtAsymmetricSigningBuilder[F[_]: ApplicativeThrow, G[_]: Crypto: Functor](
+private[jots] final case class JwtAsymmetricSigningBuilder[F[_]: MonadThrow, G[_]: Crypto: MonadThrow](
   override val checkKeyRequirements: Boolean,
   algorithm: JwtAsymmetricAlgorithm,
   privateKey: PrivateKey
@@ -145,7 +143,7 @@ private[jots] final case class JwtAsymmetricSigningBuilder[F[_]: ApplicativeThro
 }
 
 private[jots] object JwtAsymmetricSigningBuilder {
-  def default[F[_]: ApplicativeThrow, G[_]: Crypto: Functor](
+  def default[F[_]: MonadThrow, G[_]: Crypto: MonadThrow](
     algorithm: JwtAsymmetricAlgorithm,
     privateKey: PrivateKey
   ): JwtAsymmetricSigningBuilder[F, G] =
@@ -156,7 +154,7 @@ private[jots] object JwtAsymmetricSigningBuilder {
     )
 }
 
-private[jots] final case class JwtHmacSigningBuilder[F[_]: ApplicativeThrow, G[_]: Crypto: Functor](
+private[jots] final case class JwtHmacSigningBuilder[F[_]: MonadThrow, G[_]: Crypto: MonadThrow](
   override val checkKeyRequirements: Boolean,
   algorithm: JwtHmacAlgorithm,
   secretKey: SecretKey
@@ -169,7 +167,7 @@ private[jots] final case class JwtHmacSigningBuilder[F[_]: ApplicativeThrow, G[_
 }
 
 private[jots] object JwtHmacSigningBuilder {
-  def default[F[_]: ApplicativeThrow, G[_]: Crypto: Functor](
+  def default[F[_]: MonadThrow, G[_]: Crypto: MonadThrow](
     algorithm: JwtHmacAlgorithm,
     secretKey: SecretKey
   ): JwtHmacSigningBuilder[F, G] =
@@ -180,7 +178,7 @@ private[jots] object JwtHmacSigningBuilder {
     )
 }
 
-private[jots] final case class JwtJwkSigningBuilder[F[_]: MonadThrow, G[_]: Crypto: Functor](
+private[jots] final case class JwtJwkSigningBuilder[F[_]: MonadThrow, G[_]: Crypto: MonadThrow](
   override val checkKeyRequirements: Boolean,
   algorithm: JwtAlgorithm,
   key: Jwk
@@ -204,7 +202,7 @@ private[jots] final case class JwtJwkSigningBuilder[F[_]: MonadThrow, G[_]: Cryp
 }
 
 private[jots] object JwtJwkSigningBuilder {
-  def default[F[_]: MonadThrow, G[_]: Crypto: Functor](
+  def default[F[_]: MonadThrow, G[_]: Crypto: MonadThrow](
     algorithm: JwtAlgorithm,
     key: Jwk
   ): JwtJwkSigningBuilder[F, G] =
