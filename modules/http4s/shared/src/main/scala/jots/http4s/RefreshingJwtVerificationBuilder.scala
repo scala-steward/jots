@@ -106,7 +106,7 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
     * during which the keys are used. Once the keys are older, they
     * are not used, and verification fails until keys are refreshed.
     *
-    * The default max key age is unlimited (`Duration.Inf`).
+    * The default max key age is 24 hours.
     */
   def maxKeyAge: Duration
 
@@ -115,9 +115,10 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
     * during which the keys are used. Once the keys are older, they
     * are not used, and verification fails until keys are refreshed.
     *
-    * Note the max key age should be longer than the refresh interval.
+    * Note the max key age must be longer than the refresh interval.
+    * Use `Duration.Inf` to keep using the keys without age limit.
     *
-    * The default max key age is unlimited (`Duration.Inf`).
+    * The default max key age is 24 hours.
     */
   def withMaxKeyAge(maxKeyAge: Duration): RefreshingJwtVerificationBuilder[F]
 
@@ -260,7 +261,7 @@ object RefreshingJwtVerificationBuilder {
       refreshInterval = 60.minutes,
       refreshIntervalOnError = 60.seconds,
       minRefreshIntervalOnMissingKey = 60.seconds,
-      maxKeyAge = Duration.Inf,
+      maxKeyAge = 24.hours,
       retryPolicy = RetryPolicy(RetryPolicy.exponentialBackoff(maxWait = 5.seconds, maxRetry = 4)),
       requireHttps = true,
       uri = uri,
