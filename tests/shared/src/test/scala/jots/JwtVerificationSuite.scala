@@ -337,6 +337,27 @@ object JwtVerificationSuite extends SimpleIOSuite with Checkers {
     } yield success
   }
 
+  pureTest("JwtVerification.rejectNegativeClockSkew") {
+    val publicKey = PublicKey.fromX509Spki(ByteVector(1, 2, 3))
+    val keySet = JwkSet(octJwk("key-1"))
+
+    val builders: List[JwtVerificationBuilder[IO, IO]] =
+      List(
+        JwtVerificationBuilder.default[IO].hmac(algorithm, secretKey),
+        JwtVerificationBuilder.default[IO].rsa(JwtRsaAlgorithm.RS256, publicKey),
+        JwtVerificationBuilder.default[IO].jwkSet(JwtAlgorithm.All, keySet)
+      )
+
+    builders.map { builder =>
+      expect(
+        Either
+          .catchNonFatal(builder.withClockSkew(-1.nanosecond))
+          .swap
+          .exists(_.isInstanceOf[IllegalArgumentException])
+      )
+    }.combineAll
+  }
+
   test("JwtVerification.rejectMissingIssuer") {
     for {
       signed <- sign(JwtClaims.empty)

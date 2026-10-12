@@ -248,6 +248,8 @@ sealed abstract class JwtVerificationBuilder[F[_], G[_]] {
     * - expiration (exp),
     * - issued at (iat), and
     * - not-before (nbf) values.
+    *
+    * The clock skew must not be negative.
     */
   def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G]
 
@@ -540,8 +542,14 @@ private[jots] final case class JwtHmacVerificationBuilder[
   override def withRequireNotBefore(requireNotBefore: Boolean): JwtVerificationBuilder[F, G] =
     copy(requireNotBefore = requireNotBefore)
 
-  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] =
+  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] = {
+    require(
+      clockSkew >= Duration.Zero,
+      s"clock skew [$clockSkew] must not be negative"
+    )
+
     copy(clockSkew = clockSkew)
+  }
 
   override def withCriticalHeaders(criticalHeaders: List[String]): JwtVerificationBuilder[F, G] =
     copy(criticalHeaders = criticalHeaders)
@@ -630,8 +638,14 @@ private[jots] final case class JwtAsymmetricVerificationBuilder[
   override def withRequireNotBefore(requireNotBefore: Boolean): JwtVerificationBuilder[F, G] =
     copy(requireNotBefore = requireNotBefore)
 
-  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] =
+  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] = {
+    require(
+      clockSkew >= Duration.Zero,
+      s"clock skew [$clockSkew] must not be negative"
+    )
+
     copy(clockSkew = clockSkew)
+  }
 
   override def withCriticalHeaders(criticalHeaders: List[String]): JwtVerificationBuilder[F, G] =
     copy(criticalHeaders = criticalHeaders)
@@ -746,8 +760,14 @@ private[jots] final case class JwtJwkSetVerificationBuilder[
   override def withRequireNotBefore(requireNotBefore: Boolean): JwtVerificationBuilder[F, G] =
     copy(requireNotBefore = requireNotBefore)
 
-  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] =
+  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] = {
+    require(
+      clockSkew >= Duration.Zero,
+      s"clock skew [$clockSkew] must not be negative"
+    )
+
     copy(clockSkew = clockSkew)
+  }
 
   override def withCriticalHeaders(criticalHeaders: List[String]): JwtVerificationBuilder[F, G] =
     copy(criticalHeaders = criticalHeaders)
