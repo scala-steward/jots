@@ -18,6 +18,7 @@ package jots
 
 import cats.Show
 import cats.kernel.laws.discipline.HashTests
+import cats.kernel.laws.discipline.OrderTests
 import jots.testing.*
 import weaver.SimpleIOSuite
 import weaver.discipline.Discipline
@@ -25,6 +26,8 @@ import weaver.scalacheck.Checkers
 
 object JwkKeyTypeSuite extends SimpleIOSuite with Checkers with Discipline {
   checkAll("JwkKeyType.hash", HashTests[JwkKeyType].hash)
+
+  checkAll("JwkKeyType.order", OrderTests[JwkKeyType].order)
 
   test("JwkKeyType.show") {
     forall { (keyType: JwkKeyType) =>
