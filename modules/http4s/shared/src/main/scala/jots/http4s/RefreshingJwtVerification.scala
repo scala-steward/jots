@@ -99,7 +99,7 @@ object RefreshingJwtVerification {
     * Exception raised when keys were not refreshed within a
     * max key age, with the most recent failure as the cause.
     */
-  final class ExpiredKeySet(maxKeyAge: FiniteDuration, cause: Option[Throwable])
+  final class ExpiredKeySet private[http4s] (maxKeyAge: FiniteDuration, cause: Option[Throwable])
     extends RuntimeException(
       s"the key set was not refreshed within the max key age of $maxKeyAge",
       cause.orNull
@@ -110,7 +110,7 @@ object RefreshingJwtVerification {
     * Exception raised when no key set is available yet, since
     * refreshing failed, with the refresh failure as the cause.
     */
-  final class UnavailableKeySet(cause: Throwable)
+  final class UnavailableKeySet private[http4s] (cause: Throwable)
     extends RuntimeException("key set is not available", cause)
     with NoStackTrace
 

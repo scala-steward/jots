@@ -30,18 +30,18 @@ object CryptoException extends CryptoExceptionCompanionPlatform {
   /**
     * Exception raised when there is an issue creating a [[PrivateKey]].
     */
-  final class InvalidPrivateKey(details: String, cause: Option[Throwable] = None)
+  final class InvalidPrivateKey private[crypto] (details: String, cause: Option[Throwable] = None)
     extends CryptoException(s"invalid private key: $details", cause)
 
   /**
     * Exception raised when there is an issue creating a [[PublicKey]].
     */
-  final class InvalidPublicKey(details: String, cause: Option[Throwable] = None)
+  final class InvalidPublicKey private[crypto] (details: String, cause: Option[Throwable] = None)
     extends CryptoException(s"invalid public key: $details", cause)
 
   /**
     * Exception raised when there is an issue creating a [[SecretKey]].
     */
-  final class InvalidSecretKey(details: String, cause: Option[Throwable] = None)
+  final class InvalidSecretKey private[crypto] (details: String, cause: Option[Throwable] = None)
     extends CryptoException(s"invalid secret key: $details", cause)
 }
