@@ -23,6 +23,18 @@ import weaver.discipline.Discipline
 import weaver.scalacheck.Checkers
 
 object VerifiedJwtSuite extends SimpleIOSuite with Checkers with Discipline {
+  test("VerifiedJwt.fromVerified") {
+    // The testing module calls this package-private function,
+    // which MiMa does not check, so its signature must remain
+    // binary compatible.
+    val fromVerified: SignedJwt => VerifiedJwt =
+      VerifiedJwt.fromVerified
+
+    forall { (jwt: SignedJwt) =>
+      expect.eql(jwt, fromVerified(jwt).toSigned)
+    }
+  }
+
   checkAll("VerifiedJwt.hash", HashTests[VerifiedJwt].hash)
 
   test("VerifiedJwt.show") {
