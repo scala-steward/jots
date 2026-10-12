@@ -59,7 +59,7 @@ trait JwtSigning[F[_]] {
     * Returns a new [[JwtSigning]] instance which applies the
     * specified function on the [[JwtBuilder]] before signing.
     */
-  def mapJwt(f: JwtBuilder => JwtBuilder): JwtSigning[F] =
+  final def mapJwt(f: JwtBuilder => JwtBuilder): JwtSigning[F] =
     JwtSigning.signWith(jwt => sign(f(jwt)))
 }
 
