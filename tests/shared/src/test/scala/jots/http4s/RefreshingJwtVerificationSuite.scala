@@ -274,7 +274,7 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
       expect.eql(60.minutes, builder.refreshInterval) &&
       expect.eql(60.seconds, builder.refreshIntervalOnError) &&
       expect.eql(60.seconds, builder.minRefreshIntervalOnMissingKey) &&
-      expect(builder.maxKeyAge == Duration.Inf) &&
+      expect(builder.maxKeyAge == 24.hours) &&
       expect(builder.requireHttps)
     }
   }
@@ -298,6 +298,23 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
         }
       }.combineAll
     }
+  }
+
+  test("RefreshingJwtVerification.rejectMaxKeyAgeNotAboveRefreshInterval") {
+    List(30.minutes, 1.hour)
+      .traverse { maxKeyAge =>
+        for {
+          testClient <- TestClient(keysResponse(keySet))
+          result <- jwkSetBuilder(hmacAlgorithms, testClient.client, uri)
+            .withRefreshInterval(1.hour)
+            .withMaxKeyAge(maxKeyAge)
+            .build
+            .use(_.keys)
+            .attempt
+          _ <- matchOrFailFast[IO](result) { case Left(_: IllegalArgumentException) => () }
+        } yield success
+      }
+      .map(_.combineAll)
   }
 
   test("RefreshingJwtVerification.surfaceInitialError") {
@@ -615,7 +632,7 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
     for {
       signed <- sign("key-1")
       testClient <- TestClient(keysResponse(keySet))
-      verification <- missingKeyBuilder(testClient.client)
+      verification <- builder(testClient.client)
         .withMaxKeyAge(maxKeyAge)
         .build
         .use(verification => verification.keys.as(verification))

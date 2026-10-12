@@ -61,7 +61,7 @@ import scala.util.control.NoStackTrace
   * [[RefreshingJwtVerification.UnavailableKeySet]], until the initial
   * keys are available. Subsequent errors retrieving keys continues to
   * keep the current [[JwkSet]] instead of surfacing the errors, until
-  * the keys are older than the max key age.
+  * the keys are older than the max key age, by default 24 hours.
   *
   * When verification fails because there is no key in the current set
   * with a matching key id (kid), an extra refresh is requested, and a
@@ -265,6 +265,13 @@ object RefreshingJwtVerification {
         new IllegalArgumentException(s"the key set uri must use https, was [${uri.renderString}]")
       )
 
+    def ensureMaxKeyAgeAboveRefreshInterval: F[Unit] =
+      F.raiseWhen(maxKeyAge <= refreshInterval)(
+        new IllegalArgumentException(
+          s"the max key age [$maxKeyAge] must be longer than the refresh interval [$refreshInterval]"
+        )
+      )
+
     def ensureAvailable(result: StateResult[F]): F[State[F]] =
       result match {
         case Right(state) => F.pure(state)
@@ -286,6 +293,7 @@ object RefreshingJwtVerification {
 
     for {
       _ <- ensureHttps.toResource
+      _ <- ensureMaxKeyAgeAboveRefreshInterval.toResource
       deferred <- Deferred[F, StateResult[F]].toResource
       ref <- Ref.of[F, Phase[F]](Phase.Pending(deferred)).toResource
       _ <- Resource.onFinalize(cancel(ref))
