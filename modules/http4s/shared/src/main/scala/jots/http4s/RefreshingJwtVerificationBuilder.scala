@@ -160,6 +160,24 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
   def withRequireHttps(requireHttps: Boolean): RefreshingJwtVerificationBuilder[F]
 
   /**
+    * Returns the maximum size in bytes of key set responses.
+    *
+    * Larger responses are rejected, limiting the memory used
+    * when the key set endpoint returns an unexpectedly large
+    * response.
+    *
+    * The default max response size is 512 KiB.
+    */
+  def maxResponseSize: Long
+
+  /**
+    * Sets the maximum size in bytes of key set responses.
+    *
+    * The default max response size is 512 KiB.
+    */
+  def withMaxResponseSize(maxResponseSize: Long): RefreshingJwtVerificationBuilder[F]
+
+  /**
     * Returns the `Uri` to which requests for keys should be issued.
     */
   def uri: Uri
@@ -188,6 +206,7 @@ object RefreshingJwtVerificationBuilder {
     override val maxKeyAge: Duration,
     override val retryPolicy: RetryPolicy[F],
     override val requireHttps: Boolean,
+    override val maxResponseSize: Long,
     override val uri: Uri,
     override val verification: JwkSet => F[JwtVerification[F]]
   ) extends RefreshingJwtVerificationBuilder[F] {
@@ -240,6 +259,15 @@ object RefreshingJwtVerificationBuilder {
     override def withRequireHttps(requireHttps: Boolean): RefreshingJwtVerificationBuilder[F] =
       copy(requireHttps = requireHttps)
 
+    override def withMaxResponseSize(maxResponseSize: Long): RefreshingJwtVerificationBuilder[F] = {
+      require(
+        maxResponseSize > 0,
+        s"max response size must be positive, was $maxResponseSize"
+      )
+
+      copy(maxResponseSize = maxResponseSize)
+    }
+
     override def build: Resource[F, RefreshingJwtVerification[F]] =
       RefreshingJwtVerification.fromBuilder(this)
   }
@@ -264,6 +292,7 @@ object RefreshingJwtVerificationBuilder {
       maxKeyAge = 24.hours,
       retryPolicy = RetryPolicy(RetryPolicy.exponentialBackoff(maxWait = 5.seconds, maxRetry = 4)),
       requireHttps = true,
+      maxResponseSize = 512L * 1024,
       uri = uri,
       verification = verification
     )

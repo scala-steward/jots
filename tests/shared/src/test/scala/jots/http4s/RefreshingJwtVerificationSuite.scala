@@ -42,6 +42,7 @@ import jots.crypto.SecretKey
 import jots.testing.*
 import jots.testing.syntax.*
 import org.http4s.DecodeFailure
+import org.http4s.InvalidMessageBodyFailure
 import org.http4s.MediaType
 import org.http4s.Method
 import org.http4s.Request
@@ -275,7 +276,8 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
       expect.eql(60.seconds, builder.refreshIntervalOnError) &&
       expect.eql(60.seconds, builder.minRefreshIntervalOnMissingKey) &&
       expect(builder.maxKeyAge == 24.hours) &&
-      expect(builder.requireHttps)
+      expect(builder.requireHttps) &&
+      expect.eql(512L * 1024, builder.maxResponseSize)
     }
   }
 
@@ -296,6 +298,22 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
         List(Duration.Zero, -1.second).map { duration =>
           expect(Either.catchNonFatal(setter(duration)).swap.exists(_.isInstanceOf[IllegalArgumentException]))
         }
+      }.combineAll
+    }
+  }
+
+  test("RefreshingJwtVerification.rejectNonPositiveMaxResponseSize") {
+    TestClient(keysResponse(keySet)).map { testClient =>
+      val builder =
+        RefreshingJwtVerificationBuilder.refreshWith[IO](testClient.client, uri)(_ => IO.pure(rejectAll))
+
+      List(0L, -1L).map { size =>
+        expect(
+          Either
+            .catchNonFatal(builder.withMaxResponseSize(size))
+            .swap
+            .exists(_.isInstanceOf[IllegalArgumentException])
+        )
       }.combineAll
     }
   }
@@ -368,6 +386,35 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
           ()
       }
     } yield success
+  }
+
+  test("RefreshingJwtVerification.rejectLargeResponse") {
+    List(keysResponse(keySet), streamedKeysResponse(keySet))
+      .traverse { response =>
+        for {
+          size <- response.flatMap(_.body.compile.count)
+          testClient <- TestClient(response)
+          result <- builder(testClient.client).withMaxResponseSize(size - 1).build.use(_.keys.attempt)
+          _ <- matchOrFailFast[IO](result) {
+            case Left(e: RefreshingJwtVerification.UnavailableKeySet)
+              if e.getCause.isInstanceOf[InvalidMessageBodyFailure] =>
+              ()
+          }
+        } yield success
+      }
+      .map(_.combineAll)
+  }
+
+  test("RefreshingJwtVerification.acceptsResponseOfMaxSize") {
+    List(keysResponse(keySet), streamedKeysResponse(keySet))
+      .traverse { response =>
+        for {
+          size <- response.flatMap(_.body.compile.count)
+          testClient <- TestClient(response)
+          keys <- builder(testClient.client).withMaxResponseSize(size).build.use(_.keys)
+        } yield expect.eql(keySet, keys)
+      }
+      .map(_.combineAll)
   }
 
   pureTest("RefreshingJwtVerification.decoderSkipInvalidKeys") {
@@ -764,6 +811,13 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
 
   private def keysResponse(keySet: JwkSet): IO[Response[IO]] =
     IO.pure(Response[IO](Status.Ok).withEntity(keySet))
+
+  private def streamedKeysResponse(keySet: JwkSet): IO[Response[IO]] =
+    keysResponse(keySet).map { response =>
+      Response[IO](Status.Ok)
+        .withBodyStream(response.body)
+        .withContentType(`Content-Type`(MediaType.application.`jwk-set+json`))
+    }
 
   private val invalidKeysResponse: IO[Response[IO]] =
     jsonResponse("{}")
