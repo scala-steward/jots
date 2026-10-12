@@ -16,7 +16,7 @@
 
 package jots.testing
 
-import cats.Functor
+import cats.MonadThrow
 import jots.JwtSigning
 import jots.JwtSigningBuilder
 import jots.crypto.Crypto
@@ -34,7 +34,7 @@ private[jots] trait JwtSigningInstances {
   /**
     * Generates [[jots.JwtSigning]] instances that signs with ECDSA.
     */
-  def ecdsaJwtSigningGen[F[_]: Crypto: Functor]: Gen[JwtSigning[F]] =
+  def ecdsaJwtSigningGen[F[_]: Crypto: MonadThrow]: Gen[JwtSigning[F]] =
     for {
       algorithm <- jwtEcdsaAlgorithmGen
       privateKey <- ecdsaPrivateKeyGen(algorithm)
@@ -49,7 +49,7 @@ private[jots] trait JwtSigningInstances {
   /**
     * Generates [[jots.JwtSigning]] instances that signs with EdDSA.
     */
-  def eddsaJwtSigningGen[F[_]: Crypto: Functor]: Gen[JwtSigning[F]] =
+  def eddsaJwtSigningGen[F[_]: Crypto: MonadThrow]: Gen[JwtSigning[F]] =
     for {
       algorithm <- jwtEddsaAlgorithmGen
       privateKey <- eddsaPrivateKeyGen(algorithm)
@@ -64,7 +64,7 @@ private[jots] trait JwtSigningInstances {
   /**
     * Generates [[jots.JwtSigning]] instances that signs with HMAC.
     */
-  def hmacJwtSigningGen[F[_]: Crypto: Functor]: Gen[JwtSigning[F]] =
+  def hmacJwtSigningGen[F[_]: Crypto: MonadThrow]: Gen[JwtSigning[F]] =
     for {
       algorithm <- jwtHmacAlgorithmGen
       secretKey <- secretKeyMinLengthGen(algorithm.minKeyLength)
@@ -79,7 +79,7 @@ private[jots] trait JwtSigningInstances {
   /**
     * Generates [[jots.JwtSigning]] instances that signs with RSA.
     */
-  def rsaJwtSigningGen[F[_]: Crypto: Functor]: Gen[JwtSigning[F]] =
+  def rsaJwtSigningGen[F[_]: Crypto: MonadThrow]: Gen[JwtSigning[F]] =
     for {
       algorithm <- jwtRsaAlgorithmGen
       privateKey <- rsaPrivateKeyGen
@@ -94,7 +94,7 @@ private[jots] trait JwtSigningInstances {
   /**
     * Generates [[jots.JwtSigning]] instances that signs tokens.
     */
-  def jwtSigningGen[F[_]: Crypto: Functor]: Gen[JwtSigning[F]] =
+  def jwtSigningGen[F[_]: Crypto: MonadThrow]: Gen[JwtSigning[F]] =
     Gen.oneOf(
       ecdsaJwtSigningGen,
       eddsaJwtSigningGen,
@@ -102,6 +102,6 @@ private[jots] trait JwtSigningInstances {
       rsaJwtSigningGen
     )
 
-  implicit def jwtSigningArbitrary[F[_]: Crypto: Functor]: Arbitrary[JwtSigning[F]] =
+  implicit def jwtSigningArbitrary[F[_]: Crypto: MonadThrow]: Arbitrary[JwtSigning[F]] =
     Arbitrary(jwtSigningGen[F])
 }

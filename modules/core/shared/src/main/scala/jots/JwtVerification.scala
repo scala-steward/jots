@@ -98,7 +98,7 @@ object JwtVerification {
   private[jots] def fromHmacBuilder[F[_], G[_]](
     builder: JwtHmacVerificationBuilder[F, G]
   )(implicit
-    F: ApplicativeThrow[F],
+    F: MonadThrow[F],
     G: MonadThrow[G],
     clock: Clock[G],
     crypto: Crypto[G]
@@ -155,7 +155,7 @@ object JwtVerification {
   private[jots] def fromAsymmetricBuilder[F[_], G[_]](
     builder: JwtAsymmetricVerificationBuilder[F, G]
   )(implicit
-    F: ApplicativeThrow[F],
+    F: MonadThrow[F],
     G: MonadThrow[G],
     clock: Clock[G],
     crypto: Crypto[G]

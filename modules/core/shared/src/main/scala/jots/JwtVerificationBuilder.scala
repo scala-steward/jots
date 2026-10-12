@@ -16,7 +16,6 @@
 
 package jots
 
-import cats.ApplicativeThrow
 import cats.MonadThrow
 import cats.data.NonEmptyList
 import cats.data.NonEmptyMap
@@ -296,7 +295,7 @@ object JwtVerificationBuilder {
       algorithms: NonEmptyList[JwtAsymmetricAlgorithm],
       publicKey: PublicKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -311,7 +310,7 @@ object JwtVerificationBuilder {
       algorithm: JwtEcdsaAlgorithm,
       publicKey: PublicKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -327,7 +326,7 @@ object JwtVerificationBuilder {
       algorithms: NonEmptyList[JwtEcdsaAlgorithm],
       publicKey: PublicKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -342,7 +341,7 @@ object JwtVerificationBuilder {
       algorithm: JwtEddsaAlgorithm,
       publicKey: PublicKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -358,7 +357,7 @@ object JwtVerificationBuilder {
       algorithms: NonEmptyList[JwtEddsaAlgorithm],
       publicKey: PublicKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -373,7 +372,7 @@ object JwtVerificationBuilder {
       algorithm: JwtHmacAlgorithm,
       secretKey: SecretKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -388,7 +387,7 @@ object JwtVerificationBuilder {
       algorithms: NonEmptyList[JwtHmacAlgorithm],
       secretKey: SecretKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -451,7 +450,7 @@ object JwtVerificationBuilder {
       algorithm: JwtRsaAlgorithm,
       publicKey: PublicKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -467,7 +466,7 @@ object JwtVerificationBuilder {
       algorithms: NonEmptyList[JwtRsaAlgorithm],
       publicKey: PublicKey
     )(implicit
-      F: ApplicativeThrow[F],
+      F: MonadThrow[F],
       G: MonadThrow[G],
       clock: Clock[G],
       crypto: Crypto[G]
@@ -483,7 +482,7 @@ object JwtVerificationBuilder {
 }
 
 private[jots] final case class JwtHmacVerificationBuilder[
-  F[_]: ApplicativeThrow,
+  F[_]: MonadThrow,
   G[_]: Clock: Crypto: MonadThrow
 ](
   override val acceptedAudiences: AcceptedAudiences,
@@ -553,7 +552,7 @@ private[jots] final case class JwtHmacVerificationBuilder[
 
 private[jots] object JwtHmacVerificationBuilder {
   def default[
-    F[_]: ApplicativeThrow,
+    F[_]: MonadThrow,
     G[_]: Clock: Crypto: MonadThrow
   ](
     algorithms: NonEmptyList[JwtHmacAlgorithm],
@@ -579,7 +578,7 @@ private[jots] object JwtHmacVerificationBuilder {
 }
 
 private[jots] final case class JwtAsymmetricVerificationBuilder[
-  F[_]: ApplicativeThrow,
+  F[_]: MonadThrow,
   G[_]: Clock: Crypto: MonadThrow
 ](
   override val acceptedAudiences: AcceptedAudiences,
@@ -643,7 +642,7 @@ private[jots] final case class JwtAsymmetricVerificationBuilder[
 
 private[jots] object JwtAsymmetricVerificationBuilder {
   def default[
-    F[_]: ApplicativeThrow,
+    F[_]: MonadThrow,
     G[_]: Clock: Crypto: MonadThrow
   ](
     algorithms: NonEmptyList[JwtAsymmetricAlgorithm],
