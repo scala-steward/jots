@@ -128,6 +128,10 @@ resolvers += Resolver.sonatypeCentralSnapshots
 libraryDependencies += "@ORGANIZATION@" %% "jots" % "@SNAPSHOT_VERSION@"
 ```
 
+## Participation
+
+Everyone is expected to follow the [Typelevel Code of Conduct](https://typelevel.org/code-of-conduct/) as described [here](https://github.com/vlovgr/ciris/blob/main/.github/CODE_OF_CONDUCT.md).
+
 ## License
 
 The library is distributed under the [Apache License, Version 2.0](https://github.com/vlovgr/jots/blob/main/license.txt).
