@@ -61,6 +61,9 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
   /**
     * Sets the duration to wait between refresh attempts.
     *
+    * The refresh interval must be positive, otherwise
+    * [[build]] raises an `IllegalArgumentException`.
+    *
     * The default refresh interval is 60 minutes.
     */
   def withRefreshInterval(refreshInterval: FiniteDuration): RefreshingJwtVerificationBuilder[F]
@@ -76,6 +79,9 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
   /**
     * Sets the duration to wait between refresh attempts
     * when the most recent refresh attempt failed.
+    *
+    * The refresh interval on errors must be positive,
+    * otherwise [[build]] raises an `IllegalArgumentException`.
     *
     * The default refresh interval on errors is 60 seconds.
     */
@@ -94,6 +100,9 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
     * Sets the minimum duration between the last refresh attempt and
     * an extra refresh attempt, which is made when verification
     * fails because no key matched the token key id (kid).
+    *
+    * The minimum refresh interval on missing keys must be positive,
+    * otherwise [[build]] raises an `IllegalArgumentException`.
     *
     * The default minimum refresh interval on missing keys is 60 seconds.
     */
@@ -115,8 +124,10 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
     * during which the keys are used. Once the keys are older, they
     * are not used, and verification fails until keys are refreshed.
     *
-    * Note the max key age must be longer than the refresh interval.
-    * Use `Duration.Inf` to keep using the keys without age limit.
+    * Note the max key age must be longer than the refresh interval,
+    * otherwise [[build]] raises an `IllegalArgumentException`. Use
+    * `Duration.Inf` to keep using the keys without age limit; other
+    * infinite durations are rejected.
     *
     * The default max key age is 24 hours.
     */
@@ -173,6 +184,9 @@ sealed abstract class RefreshingJwtVerificationBuilder[F[_]] {
   /**
     * Sets the maximum size in bytes of key set responses.
     *
+    * The max response size must be positive, otherwise
+    * [[build]] raises an `IllegalArgumentException`.
+    *
     * The default max response size is 512 KiB.
     */
   def withMaxResponseSize(maxResponseSize: Long): RefreshingJwtVerificationBuilder[F]
@@ -213,45 +227,21 @@ object RefreshingJwtVerificationBuilder {
     override def withLogger(logger: Logger[F]): RefreshingJwtVerificationBuilder[F] =
       copy(logger = logger)
 
-    override def withRefreshInterval(refreshInterval: FiniteDuration): RefreshingJwtVerificationBuilder[F] = {
-      require(
-        refreshInterval > Duration.Zero,
-        s"refresh interval must be positive, was $refreshInterval"
-      )
-
+    override def withRefreshInterval(refreshInterval: FiniteDuration): RefreshingJwtVerificationBuilder[F] =
       copy(refreshInterval = refreshInterval)
-    }
 
     override def withRefreshIntervalOnError(
       refreshIntervalOnError: FiniteDuration
-    ): RefreshingJwtVerificationBuilder[F] = {
-      require(
-        refreshIntervalOnError > Duration.Zero,
-        s"refresh interval on error must be positive, was $refreshIntervalOnError"
-      )
-
+    ): RefreshingJwtVerificationBuilder[F] =
       copy(refreshIntervalOnError = refreshIntervalOnError)
-    }
 
     override def withMinRefreshIntervalOnMissingKey(
       minRefreshIntervalOnMissingKey: FiniteDuration
-    ): RefreshingJwtVerificationBuilder[F] = {
-      require(
-        minRefreshIntervalOnMissingKey > Duration.Zero,
-        s"minimum refresh interval on missing key must be positive, was $minRefreshIntervalOnMissingKey"
-      )
-
+    ): RefreshingJwtVerificationBuilder[F] =
       copy(minRefreshIntervalOnMissingKey = minRefreshIntervalOnMissingKey)
-    }
 
-    override def withMaxKeyAge(maxKeyAge: Duration): RefreshingJwtVerificationBuilder[F] = {
-      require(
-        maxKeyAge > Duration.Zero,
-        s"max key age must be positive, was $maxKeyAge"
-      )
-
+    override def withMaxKeyAge(maxKeyAge: Duration): RefreshingJwtVerificationBuilder[F] =
       copy(maxKeyAge = maxKeyAge)
-    }
 
     override def withRetryPolicy(retryPolicy: RetryPolicy[F]): RefreshingJwtVerificationBuilder[F] =
       copy(retryPolicy = retryPolicy)
@@ -259,14 +249,8 @@ object RefreshingJwtVerificationBuilder {
     override def withRequireHttps(requireHttps: Boolean): RefreshingJwtVerificationBuilder[F] =
       copy(requireHttps = requireHttps)
 
-    override def withMaxResponseSize(maxResponseSize: Long): RefreshingJwtVerificationBuilder[F] = {
-      require(
-        maxResponseSize > 0,
-        s"max response size must be positive, was $maxResponseSize"
-      )
-
+    override def withMaxResponseSize(maxResponseSize: Long): RefreshingJwtVerificationBuilder[F] =
       copy(maxResponseSize = maxResponseSize)
-    }
 
     override def build: Resource[F, RefreshingJwtVerification[F]] =
       RefreshingJwtVerification.fromBuilder(this)
