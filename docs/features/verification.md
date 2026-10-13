@@ -141,7 +141,7 @@ Finally, let's run the effect to show the token could be verified and decoded su
 userJwt.unsafeRunSync()
 ```
 
-There's also `JwtVerification#decode` for returning a `VerifiedJwt` (without `JwtDecoder` requirement). Similarly, there is `verify` for returning a `VerifiedJwt` from a `SignedJwt`, and `verifyAs` for also decoding with `JwtDecoder`. These are useful when we want to handle parsing or decoding separately from `JwtVerification`. Note these can be overridden for [custom verifications](#custom-verification).
+There's also `JwtVerification#decode` for returning a `VerifiedJwt` (without `JwtDecoder` requirement). Similarly, there is `verify` for returning a `VerifiedJwt` from a `SignedJwt`, and `verifyAs` for also decoding with `JwtDecoder`. These are useful when we want to handle parsing or decoding separately from `JwtVerification`.
 
 #### Separate Parsing, Verification and Decoding
 
