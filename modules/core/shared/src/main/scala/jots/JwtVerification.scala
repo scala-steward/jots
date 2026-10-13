@@ -62,7 +62,7 @@ trait JwtVerification[F[_]] {
     * the claims to the specified type if the signature
     * and claims are valid; otherwise raises an exception.
     */
-  def verifyAs[A](jwt: SignedJwt)(implicit F: MonadThrow[F], A: JwtDecoder[A]): F[A] =
+  final def verifyAs[A](jwt: SignedJwt)(implicit F: MonadThrow[F], A: JwtDecoder[A]): F[A] =
     verify(jwt).flatMap(_.as[A].liftTo[F])
 
   /**
@@ -70,7 +70,7 @@ trait JwtVerification[F[_]] {
     * a [[VerifiedJwt]] if the signature and claims are
     * valid; otherwise raises an exception.
     */
-  def decode(jwt: String)(implicit F: MonadThrow[F]): F[VerifiedJwt] =
+  final def decode(jwt: String)(implicit F: MonadThrow[F]): F[VerifiedJwt] =
     SignedJwt.fromString(jwt).liftTo[F].flatMap(verify)
 
   /**
@@ -78,7 +78,7 @@ trait JwtVerification[F[_]] {
     * the claims to the specified type if the signature
     * and claims are valid; otherwise raises an exception.
     */
-  def decodeAs[A](jwt: String)(implicit F: MonadThrow[F], A: JwtDecoder[A]): F[A] =
+  final def decodeAs[A](jwt: String)(implicit F: MonadThrow[F], A: JwtDecoder[A]): F[A] =
     SignedJwt.fromString(jwt).liftTo[F].flatMap(verifyAs[A])
 }
 
