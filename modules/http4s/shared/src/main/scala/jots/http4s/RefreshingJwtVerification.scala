@@ -49,6 +49,7 @@ import org.http4s.client.Client
 import org.http4s.client.middleware.Retry
 import org.typelevel.ci.CIString
 import scala.annotation.tailrec
+import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NoStackTrace
 
@@ -270,6 +271,35 @@ object RefreshingJwtVerification {
         case host => host.toIpAddress.exists(_.isLoopback)
       }
 
+    def ensurePositive(name: String, duration: FiniteDuration): F[Unit] =
+      F.raiseWhen(duration <= Duration.Zero)(
+        new IllegalArgumentException(s"$name must be positive, was $duration")
+      )
+
+    def ensurePositiveMaxKeyAge: F[Unit] = {
+      val positive =
+        maxKeyAge match {
+          case maxKeyAge: FiniteDuration => maxKeyAge > Duration.Zero
+          case _ => maxKeyAge == Duration.Inf
+        }
+
+      F.raiseUnless(positive)(
+        new IllegalArgumentException(s"max key age must be positive or Duration.Inf, was $maxKeyAge")
+      )
+    }
+
+    def ensurePositiveMaxResponseSize: F[Unit] =
+      F.raiseWhen(maxResponseSize <= 0)(
+        new IllegalArgumentException(s"max response size must be positive, was $maxResponseSize")
+      )
+
+    def ensureSettings: F[Unit] =
+      ensurePositive("refresh interval", refreshInterval) >>
+        ensurePositive("refresh interval on error", refreshIntervalOnError) >>
+        ensurePositive("minimum refresh interval on missing key", minRefreshIntervalOnMissingKey) >>
+        ensurePositiveMaxKeyAge >>
+        ensurePositiveMaxResponseSize
+
     def ensureHttps: F[Unit] =
       F.raiseWhen(requireHttps && !uri.scheme.contains(Uri.Scheme.https) && !isLoopback(uri))(
         new IllegalArgumentException(s"the key set uri must use https, was [${uri.renderString}]")
@@ -302,6 +332,7 @@ object RefreshingJwtVerification {
       }
 
     for {
+      _ <- ensureSettings.toResource
       _ <- ensureHttps.toResource
       _ <- ensureMaxKeyAgeAboveRefreshInterval.toResource
       deferred <- Deferred[F, StateResult[F]].toResource

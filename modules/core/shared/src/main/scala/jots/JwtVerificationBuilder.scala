@@ -20,6 +20,7 @@ import cats.MonadThrow
 import cats.data.NonEmptyList
 import cats.data.NonEmptyMap
 import cats.effect.kernel.Clock
+import cats.syntax.all.*
 import jots.crypto.Crypto
 import jots.crypto.PublicKey
 import jots.crypto.SecretKey
@@ -249,7 +250,8 @@ sealed abstract class JwtVerificationBuilder[F[_], G[_]] {
     * - issued at (iat), and
     * - not-before (nbf) values.
     *
-    * The clock skew must not be negative.
+    * The clock skew must not be negative, otherwise
+    * [[build]] raises an `IllegalArgumentException`.
     */
   def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G]
 
@@ -481,6 +483,14 @@ object JwtVerificationBuilder {
     def verifyWith[H[_]]: JwtVerificationBuilderDefault[F, H] =
       new JwtVerificationBuilderDefault[F, H] {}
   }
+
+  /*
+   * Raises an exception if the clock skew is negative.
+   */
+  private[jots] def ensureClockSkew[F[_]](clockSkew: FiniteDuration)(implicit F: MonadThrow[F]): F[Unit] =
+    F.raiseWhen(clockSkew < Duration.Zero)(
+      new IllegalArgumentException(s"clock skew [$clockSkew] must not be negative")
+    )
 }
 
 private[jots] final case class JwtHmacVerificationBuilder[
@@ -542,20 +552,15 @@ private[jots] final case class JwtHmacVerificationBuilder[
   override def withRequireNotBefore(requireNotBefore: Boolean): JwtVerificationBuilder[F, G] =
     copy(requireNotBefore = requireNotBefore)
 
-  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] = {
-    require(
-      clockSkew >= Duration.Zero,
-      s"clock skew [$clockSkew] must not be negative"
-    )
-
+  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] =
     copy(clockSkew = clockSkew)
-  }
 
   override def withCriticalHeaders(criticalHeaders: List[String]): JwtVerificationBuilder[F, G] =
     copy(criticalHeaders = criticalHeaders)
 
   override def build: F[JwtVerification[G]] =
-    JwtVerification.fromHmacBuilder(this)
+    JwtVerificationBuilder.ensureClockSkew[F](clockSkew) >>
+      JwtVerification.fromHmacBuilder(this)
 }
 
 private[jots] object JwtHmacVerificationBuilder {
@@ -638,20 +643,15 @@ private[jots] final case class JwtAsymmetricVerificationBuilder[
   override def withRequireNotBefore(requireNotBefore: Boolean): JwtVerificationBuilder[F, G] =
     copy(requireNotBefore = requireNotBefore)
 
-  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] = {
-    require(
-      clockSkew >= Duration.Zero,
-      s"clock skew [$clockSkew] must not be negative"
-    )
-
+  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] =
     copy(clockSkew = clockSkew)
-  }
 
   override def withCriticalHeaders(criticalHeaders: List[String]): JwtVerificationBuilder[F, G] =
     copy(criticalHeaders = criticalHeaders)
 
   override def build: F[JwtVerification[G]] =
-    JwtVerification.fromAsymmetricBuilder(this)
+    JwtVerificationBuilder.ensureClockSkew[F](clockSkew) >>
+      JwtVerification.fromAsymmetricBuilder(this)
 }
 
 private[jots] object JwtAsymmetricVerificationBuilder {
@@ -760,20 +760,15 @@ private[jots] final case class JwtJwkSetVerificationBuilder[
   override def withRequireNotBefore(requireNotBefore: Boolean): JwtVerificationBuilder[F, G] =
     copy(requireNotBefore = requireNotBefore)
 
-  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] = {
-    require(
-      clockSkew >= Duration.Zero,
-      s"clock skew [$clockSkew] must not be negative"
-    )
-
+  override def withClockSkew(clockSkew: FiniteDuration): JwtVerificationBuilder[F, G] =
     copy(clockSkew = clockSkew)
-  }
 
   override def withCriticalHeaders(criticalHeaders: List[String]): JwtVerificationBuilder[F, G] =
     copy(criticalHeaders = criticalHeaders)
 
   override def build: F[JwtVerification[G]] =
-    JwtVerification.fromJwkSetBuilder(this)
+    JwtVerificationBuilder.ensureClockSkew[F](clockSkew) >>
+      JwtVerification.fromJwkSetBuilder(this)
 }
 
 private[jots] object JwtJwkSetVerificationBuilder {

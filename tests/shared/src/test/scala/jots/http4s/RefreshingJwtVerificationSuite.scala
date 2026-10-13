@@ -55,6 +55,7 @@ import org.http4s.client.middleware.RetryPolicy
 import org.http4s.headers.`Content-Type`
 import org.http4s.implicits.*
 import scala.concurrent.duration.*
+import weaver.Expectations
 import weaver.SimpleIOSuite
 import weaver.scalacheck.Checkers
 
@@ -282,7 +283,7 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
   }
 
   test("RefreshingJwtVerification.rejectNonPositiveDurations") {
-    TestClient(keysResponse(keySet)).map { testClient =>
+    TestClient(keysResponse(keySet)).flatMap { testClient =>
       val builder =
         RefreshingJwtVerificationBuilder.refreshWith[IO](testClient.client, uri)(_ => IO.pure(rejectAll))
 
@@ -294,28 +295,45 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
           builder.withMaxKeyAge
         )
 
-      setters.flatMap { setter =>
-        List(Duration.Zero, -1.second).map { duration =>
-          expect(Either.catchNonFatal(setter(duration)).swap.exists(_.isInstanceOf[IllegalArgumentException]))
-        }
-      }.combineAll
+      setters
+        .flatMap(setter => List(Duration.Zero, -1.second).map(setter))
+        .traverse(expectIllegalArgument)
+        .map(_.combineAll)
     }
   }
 
   test("RefreshingJwtVerification.rejectNonPositiveMaxResponseSize") {
-    TestClient(keysResponse(keySet)).map { testClient =>
+    TestClient(keysResponse(keySet)).flatMap { testClient =>
       val builder =
         RefreshingJwtVerificationBuilder.refreshWith[IO](testClient.client, uri)(_ => IO.pure(rejectAll))
 
-      List(0L, -1L).map { size =>
-        expect(
-          Either
-            .catchNonFatal(builder.withMaxResponseSize(size))
-            .swap
-            .exists(_.isInstanceOf[IllegalArgumentException])
-        )
-      }.combineAll
+      List(0L, -1L)
+        .map(builder.withMaxResponseSize)
+        .traverse(expectIllegalArgument)
+        .map(_.combineAll)
     }
+  }
+
+  test("RefreshingJwtVerification.rejectInvalidInfiniteMaxKeyAge") {
+    TestClient(keysResponse(keySet)).flatMap { testClient =>
+      val builder =
+        RefreshingJwtVerificationBuilder.refreshWith[IO](testClient.client, uri)(_ => IO.pure(rejectAll))
+
+      List(Duration.Undefined, Duration.MinusInf)
+        .map(builder.withMaxKeyAge)
+        .traverse(expectIllegalArgument)
+        .map(_.combineAll)
+    }
+  }
+
+  test("RefreshingJwtVerification.acceptInfiniteMaxKeyAge") {
+    for {
+      testClient <- TestClient(keysResponse(keySet))
+      keys <- jwkSetBuilder(hmacAlgorithms, testClient.client, uri)
+        .withMaxKeyAge(Duration.Inf)
+        .build
+        .use(_.keys)
+    } yield expect.eql(keySet, keys)
   }
 
   test("RefreshingJwtVerification.rejectMaxKeyAgeNotAboveRefreshInterval") {
@@ -808,6 +826,12 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
 
   private def awaitInitialKeys(verification: RefreshingJwtVerification[IO]): IO[Unit] =
     verification.keys >> IO.sleep(minRefreshIntervalOnMissingKey * 10)
+
+  private def expectIllegalArgument(builder: RefreshingJwtVerificationBuilder[IO]): IO[Expectations] =
+    for {
+      result <- builder.build.use(_.keys).attempt
+      _ <- matchOrFailFast[IO](result) { case Left(_: IllegalArgumentException) => () }
+    } yield success
 
   private def keysResponse(keySet: JwkSet): IO[Response[IO]] =
     IO.pure(Response[IO](Status.Ok).withEntity(keySet))
