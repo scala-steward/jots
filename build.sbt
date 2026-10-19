@@ -10,7 +10,7 @@ val scala213Version = "2.13.18"
 val scala3Version = "3.3.8"
 val scalaCheckVersion = "1.20.0"
 val scodecBitsVersion = "1.2.5"
-val slf4jVersion = "1.7.36"
+val slf4jVersion = "2.0.20"
 val vaultVersion = "3.7.0"
 val weaverVersion = "0.13.0"
 
@@ -113,6 +113,7 @@ lazy val docs = project
     import org.typelevel.sbt.site.GenericSiteSettings
 
     Seq(
+      crossScalaVersions := Seq(scala3Version),
       libraryDependencies ++= Seq(
         "org.http4s" %% "http4s-dsl" % http4sVersion,
         "org.http4s" %% "http4s-ember-client" % http4sVersion,
@@ -326,12 +327,36 @@ lazy val unidocs = project
   .enablePlugins(TypelevelUnidocPlugin)
   .settings(
     name := "jots-docs",
+    crossScalaVersions := Seq(scala3Version),
+    semanticdbEnabled := false,
     ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(
       core.jvm,
       crypto.jvm,
       http4s.jvm,
       testing.jvm
-    )
+    ),
+    ScalaUnidoc / unidoc / apiMappings := {
+      val docsApiUrl = apiURL.value.map(_.toString)
+      (ScalaUnidoc / unidoc / apiMappings).value.filterNot { case (_, url) =>
+        docsApiUrl.contains(url.toString)
+      }
+    },
+    ScalaUnidoc / unidoc / scalacOptions := {
+      val docVersion = tlLatestVersion.value.getOrElse(version.value)
+      val logo = (LocalRootProject / baseDirectory).value / "docs" / "img" / "logo.svg"
+      val options = (ScalaUnidoc / unidoc / scalacOptions).value.filterNot { option =>
+        option == "-Werror" || option == "-Wvalue-discard" || option.startsWith("-Ykind-projector")
+      }
+      val projectOptions = withOption(options, "-project", s"Jots v$docVersion")
+      withOption(projectOptions, "-project-version", s"v$docVersion") ++ Seq(
+        "-comment-syntax:wiki",
+        "-doc-canonical-base-url:https://vlovgr.github.io/jots/api/",
+        "-project-footer:Licensed under Apache License, Version 2.0. Copyright © 2026 Viktor Rudebeck.",
+        s"-project-logo:${logo.getAbsolutePath}",
+        "-quick-links:Documentation::http://vlovgr.github.io/jots/overview.html",
+        "-social-links:github::https://github.com/vlovgr/jots"
+      )
+    }
   )
 
 def scalaReflect(scalaVersion: String): Seq[ModuleID] =
@@ -356,6 +381,12 @@ def majorMinorVersions(versions: Seq[String]): String = {
   if (scalaVersions.size <= 2) scalaVersions.mkString(" and ")
   else scalaVersions.init.mkString(", ") ++ " and " ++ scalaVersions.last
 }
+
+def withOption(options: Seq[String], name: String, value: String): Seq[String] =
+  options.indexOf(name) match {
+    case -1 => options ++ Seq(name, value)
+    case index => options.updated(index + 1, value)
+  }
 
 lazy val scalaJsMajorMinorVersion =
   """"org.scala-js" % "sbt-scalajs" % "([^"]+)"""".r
