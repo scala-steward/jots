@@ -353,7 +353,6 @@ lazy val unidocs = project
         "-doc-canonical-base-url:https://vlovgr.github.io/jots/api/",
         "-project-footer:Licensed under Apache License, Version 2.0. Copyright © 2026 Viktor Rudebeck.",
         s"-project-logo:${logo.getAbsolutePath}",
-        "-quick-links:Documentation::http://vlovgr.github.io/jots/overview.html",
         "-social-links:github::https://github.com/vlovgr/jots"
       )
     }
