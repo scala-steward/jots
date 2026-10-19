@@ -1,6 +1,4 @@
-{% laika.title = "Homepage" %}
-
-# Jots
+# Overview
 
 Jots is a library for working with [JSON Web Tokens (JWTs)](https://en.wikipedia.org/wiki/JSON_Web_Token) in [Scala](https://www.scala-lang.org), [Scala.js](https://www.scala-js.org) and [Scala Native](https://scala-native.org).
 
