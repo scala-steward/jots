@@ -347,7 +347,7 @@ lazy val unidocs = project
       val options = (ScalaUnidoc / unidoc / scalacOptions).value.filterNot { option =>
         option == "-Werror" || option == "-Wvalue-discard" || option.startsWith("-Ykind-projector")
       }
-      val projectOptions = withOption(options, "-project", s"Jots v$docVersion")
+      val projectOptions = withOption(options, "-project", "Jots")
       withOption(projectOptions, "-project-version", s"v$docVersion") ++ Seq(
         "-comment-syntax:wiki",
         "-doc-canonical-base-url:https://vlovgr.github.io/jots/api/",
