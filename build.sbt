@@ -228,7 +228,7 @@ lazy val docs = project
           .internalCSS(Root / "css")
           .site
           .favIcons(
-            Favicon.internal(Root / "img" / "logo.png", "180x180"),
+            Favicon.external("https://vlovgr.github.io/jots/img/logo.png", "180x180", "image/png"),
             Favicon.internal(Root / "img" / "logo.svg")
           )
           .site
