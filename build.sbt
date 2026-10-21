@@ -154,7 +154,8 @@ lazy val docs = project
           .site
           .metadata(
             title = Some("Jots · Functional JWTs for Scala"),
-            description = Some("Functional JWTs for Scala"),
+            description =
+              Some("Functional signing and verification of JWTs for Scala, Scala.js and Scala Native."),
             authors = developers.value.map(_.name),
             language = Some("en"),
             version = Some(version.value)
