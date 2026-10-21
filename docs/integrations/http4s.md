@@ -1,6 +1,6 @@
 # http4s
 
-The `jots-http4s` module provides an integration with [http4s](https://http4s.org) servers and clients. There is an `AuthMiddleware` for verifying and decoding tokens in incoming requests. There's also support for refreshing verification by periodically fetching a `JwkSet` from an HTTP endpoint with a `Client`.
+The `jots-http4s` module provides an integration with [http4s](https://http4s.org) servers and clients. There is an `AuthMiddleware` for verifying and decoding tokens in incoming requests. There's also support for refreshing verification by periodically fetching a @:api(jots.JwkSet) from an HTTP endpoint with a `Client`.
 
 ## Getting Started
 
@@ -14,7 +14,7 @@ If you are using Scala.js or Scala Native, replace the `%%` with `%%%` above.
 
 ## Request Headers
 
-There is support for both reading and writing `SignedJwt` as [`Authorization: Bearer <token>`](https://www.rfc-editor.org/rfc/rfc6750.html#section-2.1) headers from and to requests. In the following example, we define a `SignedJwt` for demonstration purposes using syntax from the [testing module](../features/testing.md#string-interpolators). We then proceed to create a request with the `SignedJwt` in the headers and then read it back again.
+There is support for both reading and writing @:api(jots.SignedJwt) as [`Authorization: Bearer <token>`](https://www.rfc-editor.org/rfc/rfc6750.html#section-2.1) headers from and to requests. In the following example, we define a `SignedJwt` for demonstration purposes using syntax from the [testing module](../features/testing.md#string-interpolators). We then proceed to create a request with the `SignedJwt` in the headers and then read it back again.
 
 ```scala mdoc:silent
 import cats.effect.IO
@@ -35,7 +35,7 @@ val signedJwtFromRequest: Option[SignedJwt] =
 
 ## Auth Middleware
 
-The `JwtAuthMiddleware` can be used to create `AuthMiddleware` for servers to parse, verify and decode tokens from incoming `Authorization: Bearer <token>` request headers. If the token is missing or invalid, a `401 Unauthorized` response is sent along with a `WWW-Authenticate` header detailing the issue.
+The @:api(jots.http4s.JwtAuthMiddleware$) can be used to create `AuthMiddleware` for servers to parse, verify and decode tokens from incoming `Authorization: Bearer <token>` request headers. If the token is missing or invalid, a `401 Unauthorized` response is sent along with a `WWW-Authenticate` header detailing the issue.
 
 ```scala mdoc:silent
 import cats.syntax.all.*
@@ -75,11 +75,11 @@ We should take care to _not_ put secrets, like `SecretKey`, in source code.
 
 Note the middleware protects every incoming request, so public routes should be combined before the authenticated routes. This normally looks something along the lines of: `publicRoutes <+> authMiddleware(authedRoutes)`. In case it is not done correctly, public routes will always get a `401 Unauthorized` without a token present.
 
-Tokens are rejected when verification raises a `JwtException`, or when decoding fails with a `DecodingFailure`. Other errors are raised as normal, so the server's error handling applies (`500 Internal Server Error` by default). Custom verifications can raise a `JwtException` to have the middleware respond with a `401 Unauthorized`.
+Tokens are rejected when verification raises a @:api(jots.JwtException), or when decoding fails with a `DecodingFailure`. Other errors are raised as normal, so the server's error handling applies (`500 Internal Server Error` by default). Custom verifications can raise a `JwtException` to have the middleware respond with a `401 Unauthorized`.
 
 ## Refreshing Verification
 
-There is `RefreshingJwtVerification` with support for periodically fetching a `JwkSet` from an HTTP endpoint and refreshing verification. The following example shows how to create a `RefreshingJwtVerification` instance, which accepts tokens issued by `https://example.auth0.com/` for the `https://api.example.com` audience. Note the example allows all supported asymmetric algorithms and uses the [default refresh settings](#default-refresh-settings).
+There is @:api(jots.http4s.RefreshingJwtVerification) with support for periodically fetching a `JwkSet` from an HTTP endpoint and refreshing verification. The following example shows how to create a `RefreshingJwtVerification` instance, which accepts tokens issued by `https://example.auth0.com/` for the `https://api.example.com` audience. Note the example allows all supported asymmetric algorithms and uses the [default refresh settings](#default-refresh-settings).
 
 ```scala mdoc:silent
 import cats.effect.Resource
@@ -108,7 +108,7 @@ val refreshingJwtVerification: Resource[IO, RefreshingJwtVerification[IO]] =
 Identity providers commonly sign tokens for many applications using the same keys. Make sure to set the accepted audiences, and preferably also the accepted issuers. Tokens with an audience (`aud`) are rejected unless the audience has been accepted.
 @:@
 
-The function passed to `refreshWith` creates the `JwtVerification` for each retrieved `JwkSet`, so the allowed algorithms (e.g. `JwtRsaAlgorithm.All`) and verifications are customized as with any `JwtVerificationBuilder`.
+The function passed to `refreshWith` creates the @:api(jots.JwtVerification) for each retrieved `JwkSet`, so the allowed algorithms (e.g. `JwtRsaAlgorithm.All`) and verifications are customized as with any @:api(jots.JwtVerificationBuilder).
 
 `RefreshingJwtVerification` extends `JwtVerification`, so it works everywhere `JwtVerification` is required. We also have the `keys` function to retrieve the current `JwkSet`. Note all functions semantically block until an initial key set is available (or an error occurred fetching the initial key set).
 
@@ -138,7 +138,7 @@ Note tokens without a `kid` in the header are rejected without requesting extra 
 
 ### Default Refresh Settings
 
-The `RefreshingJwtVerificationBuilder` can be used to customize the following defaults.
+The @:api(jots.http4s.RefreshingJwtVerificationBuilder) can be used to customize the following defaults.
 
 - The key set will be automatically refreshed every 60 minutes (the `refreshInterval` setting).
 - If the refresh attempt failed, we retry after 60 seconds (the `refreshIntervalOnError` setting).

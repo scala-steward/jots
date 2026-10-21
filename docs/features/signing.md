@@ -1,6 +1,6 @@
 # Token Signing
 
-Token signing involves four library types: `JwtEncoder`, `JwtBuilder`, `JwtSigning` and `SignedJwt`.
+Token signing involves four library types: @:api(jots.JwtEncoder), @:api(jots.JwtBuilder), @:api(jots.JwtSigning) and @:api(jots.SignedJwt).
 
 ```mermaid
 %%{init: {"fontFamily": "monospace"}}%%
@@ -58,7 +58,7 @@ JwtEncoder
 
 Note signing-related header keys (e.g. `alg`) are set by `JwtSigning` during signing, and not manually.
 
-If we don't want to define an `Encoder.AsObject`, we can use `JwtEncoder.encodeClaimsWith` instead. Note there are several functions on `JwtClaims` for including registered claims, like e.g. `withAudience`, `withExpiration` and `withIssuedAt` to mention a few of them.
+If we don't want to define an `Encoder.AsObject`, we can use `JwtEncoder.encodeClaimsWith` instead. Note there are several functions on @:api(jots.JwtClaims) for including registered claims, like e.g. `withAudience`, `withExpiration` and `withIssuedAt` to mention a few of them.
 
 ```scala mdoc:silent
 import jots.JwtClaims
@@ -88,7 +88,7 @@ JwtEncoder.encodeWith { (userJwt: UserJwt) =>
 }
 ```
 
-As seen in the examples above, a `JwtBuilder` consists of a `JwtHeader` and `JwtClaims`. `JwtBuilder.default` uses `JwtHeader.default` which includes `{"typ":"JWT"}`. There is `JwtBuilder.empty` and `JwtHeader.empty` if this is unwanted (plus the `withType` and `remove` functions on `JwtHeader` as options).
+As seen in the examples above, a `JwtBuilder` consists of a @:api(jots.JwtHeader) and `JwtClaims`. `JwtBuilder.default` uses `JwtHeader.default` which includes `{"typ":"JWT"}`. There is `JwtBuilder.empty` and `JwtHeader.empty` if this is unwanted (plus the `withType` and `remove` functions on `JwtHeader` as options).
 
 ## Signing Tokens
 
@@ -181,7 +181,7 @@ val signedJwt: SyncIO[SignedJwt] =
   } yield signedJwt
 ```
 
-The `SignedJwt` represent a parsed or generated token which has _not_ been verified. Since we've generated this token, we can be reasonably confident it also verifies successfully. However, in the general case, a `SignedJwt` should not be trusted before it has been verified. `VerifiedJwt` represents a verified token, covered on the [verification](verification.md) page.
+The `SignedJwt` represent a parsed or generated token which has _not_ been verified. Since we've generated this token, we can be reasonably confident it also verifies successfully. However, in the general case, a `SignedJwt` should not be trusted before it has been verified. @:api(jots.VerifiedJwt) represents a verified token, covered on the [verification](verification.md) page.
 
 Finally, let's generate the `String` representation of the token using `show`.
 
@@ -191,7 +191,7 @@ signedJwt.map(_.show).unsafeRunSync()
 
 ### JSON Web Key
 
-There is a `Jwk` type representing a [JSON Web Key (JWK)](https://www.rfc-editor.org/rfc/rfc7517.html). A `Jwk` can be used for signing as long as it meets all of the following criteria. For keys which do not match the criteria, an exception is raised.
+There is a @:api(jots.Jwk) type representing a [JSON Web Key (JWK)](https://www.rfc-editor.org/rfc/rfc7517.html). A `Jwk` can be used for signing as long as it meets all of the following criteria. For keys which do not match the criteria, an exception is raised.
 
 1. If `key_ops` is specified, it must contain the `sign` operation.
 2. If `use` is specified for the key, it must be set to `sig` (signature).

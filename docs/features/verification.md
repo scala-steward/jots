@@ -1,6 +1,6 @@
 # Verifying Tokens
 
-Token verification involves four library types: `SignedJwt`, `JwtVerification`, `VerifiedJwt` and `JwtDecoder`.
+Token verification involves four library types: @:api(jots.SignedJwt), @:api(jots.JwtVerification), @:api(jots.VerifiedJwt) and @:api(jots.JwtDecoder).
 
 ```mermaid
 %%{init: {"fontFamily": "monospace"}}%%
@@ -88,7 +88,7 @@ val jwtVerification: SyncIO[JwtVerification[SyncIO]] =
 Note we use `SyncIO`, and later `unsafeRunSync()`, to show the final result. In practice, you would most likely use `IO` without `unsafeRunSync()`.
 @:@
 
-If we know the `PublicKey` in advance, there is also a `publicKey` String interpolator available.
+If we know the @:api(jots.crypto.PublicKey) in advance, there is also a `publicKey` String interpolator available.
 
 ```scala mdoc:silent
 import jots.crypto.syntax.*
@@ -173,7 +173,7 @@ The default `JwtVerification` instances perform the following verifications.
 
 #### Customizing Default Verifications
 
-Except for the signature verification, the above checks can be adjusted using `JwtVerificationBuilder`. There is also additional checks which can be enabled, like requiring certain claims to be present, and further tweaks, like accounting for clock skew, which is zero by default. The following example requires `exp`, `iat`, and `nbf` to be present, and allows a 30 second clock skew. It also specifies the accepted audiences and issuers.
+Except for the signature verification, the above checks can be adjusted using @:api(jots.JwtVerificationBuilder). There is also additional checks which can be enabled, like requiring certain claims to be present, and further tweaks, like accounting for clock skew, which is zero by default. The following example requires `exp`, `iat`, and `nbf` to be present, and allows a 30 second clock skew. It also specifies the accepted audiences and issuers.
 
 ```scala mdoc:silent
 import scala.concurrent.duration.*
@@ -195,7 +195,7 @@ If the default verifications are not enough, resort to [custom verifications](#c
 
 ### JSON Web Key Set
 
-There is a `Jwk` type representing a [JSON Web Key (JWK)](https://www.rfc-editor.org/rfc/rfc7517.html) and a `JwkSet` type for [JWK Set](https://www.rfc-editor.org/rfc/rfc7517.html#section-5). A `JwkSet` can be used for verification as long as it contains at least one key that meet all of the following criteria. Keys which do not match the criteria will be filtered out, and if there are no keys available after filtering, an exception is raised.
+There is a @:api(jots.Jwk) type representing a [JSON Web Key (JWK)](https://www.rfc-editor.org/rfc/rfc7517.html) and a @:api(jots.JwkSet) type for [JWK Set](https://www.rfc-editor.org/rfc/rfc7517.html#section-5). A `JwkSet` can be used for verification as long as it contains at least one key that meet all of the following criteria. Keys which do not match the criteria will be filtered out, and if there are no keys available after filtering, an exception is raised.
 
 1. The `kid` (Key ID) parameter must be specified for the key.
 2. If `key_ops` is specified, it must contain the `verify` operation.
@@ -288,7 +288,7 @@ It is not possible to disable signature verification for the default `JwtVerific
 
 ### Custom Example
 
-Following is an example of a custom verification that requires the `nonce` header key to be present. Tokens without a nonce are rejected with a custom `JwtException`, so that, for example, the [http4s middleware](../integrations/http4s.md#auth-middleware) rejects the token and responds with a `401 Unauthorized` response.
+Following is an example of a custom verification that requires the `nonce` header key to be present. Tokens without a nonce are rejected with a custom @:api(jots.JwtException), so that, for example, the [http4s middleware](../integrations/http4s.md#auth-middleware) rejects the token and responds with a `401 Unauthorized` response.
 
 ```scala mdoc:silent
 import jots.JwtException

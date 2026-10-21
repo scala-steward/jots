@@ -14,11 +14,11 @@ If you are using Scala.js or Scala Native, replace the `%%` with `%%%` above.
 
 ## Supported Features
 
-The module provides a `Crypto[F[_]]` capability for all effect types with a `Sync[F]` (e.g. `IO`). The capability includes support for HMAC, plus signing and verification using private and public keys, respectively. Support for additional cryptographic functions might be included in the future.
+The module provides a @:api(jots.crypto.Crypto) capability for all effect types `F[_]` with a `Sync[F]` (e.g. `IO`). The capability includes support for HMAC, plus signing and verification using private and public keys, respectively. Support for additional cryptographic functions might be included in the future.
 
 ### HMAC with Secret Key
 
-The `Crypto#hmac` function implements [Hash-based Message Authentication Code (HMAC)](https://en.wikipedia.org/wiki/HMAC). This requires choosing a `HashAlgorithm` and `SecretKey`, and providing the message as a `ByteVector`. Following is an example which matches the `HS256` algorithm for tokens (HMAC using SHA-256).
+The `Crypto#hmac` function implements [Hash-based Message Authentication Code (HMAC)](https://en.wikipedia.org/wiki/HMAC). This requires choosing a @:api(jots.crypto.HashAlgorithm) and @:api(jots.crypto.SecretKey), and providing the message as a `ByteVector`. Following is an example which matches the `HS256` algorithm for tokens (HMAC using SHA-256).
 
 ```scala mdoc:silent
 import cats.effect.SyncIO
@@ -44,7 +44,7 @@ val mac: SyncIO[Mac] =
 Note we use `SyncIO`, and later `unsafeRunSync()`, to show the final result. In practice, you would most likely use `IO` without `unsafeRunSync()`. We should take care to _not_ put secrets, like `SecretKey`, in source code.
 @:@
 
-The generated Message Authentication Code (MAC), represented with `Mac`, is usually represented in hexadecimal encoding, which is the default for `Mac`. When the output is used as a signature for tokens, it is instead represented using `Base64UrlNoPad` encoding using `JwtSignature.fromMac` in the core module.
+The generated Message Authentication Code (MAC), represented with @:api(jots.crypto.Mac), is usually represented in hexadecimal encoding, which is the default for `Mac`. When the output is used as a signature for tokens, it is instead represented using `Base64UrlNoPad` encoding using `JwtSignature.fromMac` in the core module.
 
 ```scala mdoc:to-string
 mac.unsafeRunSync()
@@ -52,7 +52,7 @@ mac.unsafeRunSync()
 
 ### Signing with Private Key
 
-The `Crypto#sign` function implements asymmetric signing using a private key. This means an `AsymmetricAlgorithm` and matching `PrivateKey` have to be provided, in addition to the `ByteVector` message. Note the private key needs to match the algorithm, or an exception will be raised at runtime. Following is an example which matches the `ES256` algorithm for tokens (ECDSA using P-256 and SHA-256).
+The `Crypto#sign` function implements asymmetric signing using a private key. This means an @:api(jots.crypto.AsymmetricAlgorithm) and matching @:api(jots.crypto.PrivateKey) have to be provided, in addition to the `ByteVector` message. Note the private key needs to match the algorithm, or an exception will be raised at runtime. Following is an example which matches the `ES256` algorithm for tokens (ECDSA using P-256 and SHA-256).
 
 ```scala mdoc:silent
 import jots.crypto.EcdsaAlgorithm
@@ -79,7 +79,7 @@ val signature: SyncIO[Signature] =
 We should take care to _not_ put secrets, like `PrivateKey`, in source code.
 @:@
 
-The generated signature is represented with `Signature` and is usually represented in hexadecimal encoding, which is the default for `Signature`. When the output is used as a signature for tokens, it's represented using `Base64UrlNoPad` encoding using `JwtSignature.fromSignature` in the core module.
+The generated signature is represented with @:api(jots.crypto.Signature) and is usually represented in hexadecimal encoding, which is the default for `Signature`. When the output is used as a signature for tokens, it's represented using `Base64UrlNoPad` encoding using `JwtSignature.fromSignature` in the core module.
 
 ```scala mdoc:to-string
 signature.unsafeRunSync()
@@ -87,7 +87,7 @@ signature.unsafeRunSync()
 
 ### Verification with Public Key
 
-The `Crypto#verify` function implements asymmetric verification using a public key. This means we have to provide an `AsymmetricAlgorithm` and matching `PublicKey` in addition to a `ByteVector` message and signature. Note the public key needs to match the algorithm, or an exception will be raised at runtime. Following is an example which matches the `ES256` algorithm for tokens (ECDSA using P-256 and SHA-256).
+The `Crypto#verify` function implements asymmetric verification using a public key. This means we have to provide an `AsymmetricAlgorithm` and matching @:api(jots.crypto.PublicKey) in addition to a `ByteVector` message and signature. Note the public key needs to match the algorithm, or an exception will be raised at runtime. Following is an example which matches the `ES256` algorithm for tokens (ECDSA using P-256 and SHA-256).
 
 ```scala mdoc:silent
 import jots.crypto.PublicKey
@@ -110,7 +110,7 @@ val verified: SyncIO[Verified] =
   } yield verified
 ```
 
-The result of verification is `Verified`, which is either `Verified.Valid` or `Verified.Invalid`.
+The result of verification is @:api(jots.crypto.Verified), which is either `Verified.Valid` or `Verified.Invalid`.
 
 ```scala mdoc:to-string
 verified.unsafeRunSync()

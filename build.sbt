@@ -99,6 +99,8 @@ lazy val docs = project
     import laika.ast.LengthUnit.px
     import laika.ast.Path.Root
     import laika.ast.Styles
+    import laika.config.ApiLinks
+    import laika.config.LinkConfig
     import laika.helium.Helium
     import laika.helium.config.ButtonLink
     import laika.helium.config.ColorQuintet
@@ -119,7 +121,10 @@ lazy val docs = project
         "org.http4s" %% "http4s-ember-client" % http4sVersion,
         "org.slf4j" % "slf4j-nop" % slf4jVersion % Runtime
       ),
-      Compile / packageDoc / mappings := (unidocs / Compile / packageDoc / mappings).value,
+      Compile / packageDoc / mappings := (unidocs / Compile / packageDoc / mappings).value.map {
+        case (file, path) => file -> path.replace('\\', '/')
+      },
+      laikaConfig ~= (_.withConfigValue(LinkConfig.empty.addApiLinks(ApiLinks("/api/")))),
       laikaIncludeAPI := true,
       tlSiteApiUrl := None,
       tlSitePreview := tlSitePreview.dependsOn(laikaGenerateAPI).value,

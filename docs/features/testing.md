@@ -1,6 +1,6 @@
 # Testing
 
-The `jots-testing` module depends on the core module and provides [ScalaCheck](https://scalacheck.org) generators and instances, and String interpolators for secrets. Importantly, the testing module also allows us to create a `VerifiedJwt` from any `SignedJwt` for testing purposes. This means the module should generally only be used for testing purposes.
+The `jots-testing` module depends on the core module and provides [ScalaCheck](https://scalacheck.org) generators and instances, and String interpolators for secrets. Importantly, the testing module also allows us to create a @:api(jots.VerifiedJwt) from any @:api(jots.SignedJwt) for testing purposes. This means the module should generally only be used for testing purposes.
 
 ## Getting Started
 
@@ -18,7 +18,7 @@ The ScalaCheck generators and instances can be made available with `import jots.
 
 ### ScalaCheck Support
 
-The testing module provides ScalaCheck `Gen` generators and `Arbitrary` instances. Following are some samples from a few generators. Note private and public keys (`PrivateKey` and `PublicKey`) are _not_ generated on the fly, but instead choose from a pre-defined list of keys. This is due to the generation being computationally expensive.
+The testing module provides ScalaCheck `Gen` generators and `Arbitrary` instances. Following are some samples from a few generators. Note private and public keys (@:api(jots.crypto.PrivateKey) and @:api(jots.crypto.PublicKey)) are _not_ generated on the fly, but instead choose from a pre-defined list of keys. This is due to the generation being computationally expensive.
 
 ```scala mdoc:to-string
 import cats.effect.IO
@@ -46,7 +46,7 @@ rsaKeyPairGen.sample
 
 ### String Interpolators
 
-The `jots-crypto` module provides syntax for compile-time parsing of public keys (`PublicKey`). The testing module provides additional syntax for private keys (`PrivateKey`), secret keys (`SecretKey`), and tokens (`SignedJwt`). These are generally sensitive and should _not_ be in source code, except when they are non-secret for testing purposes.
+The `jots-crypto` module provides syntax for compile-time parsing of public keys (`PublicKey`). The testing module provides additional syntax for private keys (`PrivateKey`), secret keys (@:api(jots.crypto.SecretKey)), and tokens (`SignedJwt`). These are generally sensitive and should _not_ be in source code, except when they are non-secret for testing purposes.
 
 ```scala mdoc:silent
 import jots.SignedJwt

@@ -25,7 +25,7 @@ given Encoder.AsObject[UserJwt] =
   )
 ```
 
-Similarly, we define a `JwtEncoder` which encodes `UserJwt` as `JwtBuilder`.
+Similarly, we define a @:api(jots.JwtEncoder) which encodes `UserJwt` as @:api(jots.JwtBuilder).
 
 ```scala mdoc
 import jots.JwtEncoder
@@ -48,7 +48,7 @@ val userJwt = UserJwt(
 userJwt.asJwt
 ```
 
-Finally, we need to sign the `JwtBuilder` to create a `SignedJwt`. For this we need a `JwtSigning` instance. In this case we chose to use `HS256` (HMAC with SHA-256) which requires a secret key. The `JwtSigning` instance is only created and used once here, but it is normally reused multiple times.
+Finally, we need to sign the `JwtBuilder` to create a @:api(jots.SignedJwt). For this we need a @:api(jots.JwtSigning) instance. In this case we chose to use `HS256` (HMAC with SHA-256) which requires a secret key. The `JwtSigning` instance is only created and used once here, but it is normally reused multiple times.
 
 ```scala mdoc:to-string
 import cats.effect.SyncIO
@@ -85,7 +85,7 @@ given Decoder[UserJwt] =
   Decoder.forProduct3("userId", "exp", "iat")(UserJwt.apply)
 ```
 
-Similarly, we define a `JwtDecoder` which decodes `UserJwt` from `VerifiedJwt`.
+Similarly, we define a @:api(jots.JwtDecoder) which decodes `UserJwt` from @:api(jots.VerifiedJwt).
 
 ```scala mdoc
 import jots.JwtDecoder
@@ -96,7 +96,7 @@ given JwtDecoder[UserJwt] =
 
 Here, `JwtDecoder.decodeClaims` uses the `Decoder` above to decode `UserJwt` from the claims of a `VerifiedJwt`. The `VerifiedJwt` is a `SignedJwt` for which the signature has been verified. Verification typically includes verifying header and claims in addition to the signature.
 
-Following, we use the default `JwtVerification` and `decodeAs` to parse, verify and decode a signed token. The default verifications include extra checks in addition to verifying the signature. See the page on [verification](features/verification.md) for more details on the [default checks](features/verification.md#default-verifications), how they can be changed, and how to enable more checks.
+Following, we use the default @:api(jots.JwtVerification) and `decodeAs` to parse, verify and decode a signed token. The default verifications include extra checks in addition to verifying the signature. See the page on [verification](features/verification.md) for more details on the [default checks](features/verification.md#default-verifications), how they can be changed, and how to enable more checks.
 
 ```scala mdoc:to-string
 import jots.JwtVerificationBuilder
