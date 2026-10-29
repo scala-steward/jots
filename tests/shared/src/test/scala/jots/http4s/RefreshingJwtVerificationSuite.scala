@@ -296,7 +296,7 @@ object RefreshingJwtVerificationSuite extends SimpleIOSuite with Checkers {
         )
 
       setters
-        .flatMap(setter => List(Duration.Zero, -1.second).map(setter))
+        .flatMap(setter => List(Duration.Zero, (-1).second).map(setter))
         .traverse(expectIllegalArgument)
         .map(_.combineAll)
     }

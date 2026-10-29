@@ -349,7 +349,7 @@ object JwtVerificationSuite extends SimpleIOSuite with Checkers {
       )
 
     builders
-      .map(_.withClockSkew(-1.nanosecond))
+      .map(_.withClockSkew((-1).nanosecond))
       .traverse { builder =>
         for {
           result <- builder.build.attempt
