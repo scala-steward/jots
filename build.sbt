@@ -45,7 +45,6 @@ inThisBuild(
     tlJdkRelease := Some(8),
     tlSitePublishBranch := Some("main"),
     versionScheme := Some("early-semver"),
-    mimaReportSignatureProblems := true,
     mimaBinaryIssueFilters ++= {
       import com.typesafe.tools.mima.core._
       Seq(
